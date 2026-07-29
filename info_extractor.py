@@ -4,6 +4,32 @@ from intent_detector import _extract_text
 from patient_validator import check_specialization_available, validate_patient_id
 from state import Intent
 import json
+import re
+
+def _extract_specialization_from_input(text: str) -> str:
+    """Extract specialization from user input as fallback.
+
+    Looks for keywords like: ophthalmologist, cardiologist, pediatrician, etc.
+    """
+    specializations = [
+        "ophthalmologist", "ophthalmology", "eye", "vision", "sight",
+        "cardiologist", "cardiology", "heart",
+        "orthopedist", "orthopedics", "spine", "bone",
+        "pediatrician", "pediatrics", "children",
+        "dermatologist", "dermatology", "skin",
+        "psychiatrist", "psychiatry", "mental",
+        "neurologist", "neurology", "brain",
+        "surgeon", "surgery",
+        "internist", "internal medicine", "general practice",
+    ]
+
+    text_lower = text.lower()
+    for spec in specializations:
+        if spec in text_lower:
+            return spec
+
+    return None
+
 
 EXTRACTION_PROMPT = ChatPromptTemplate.from_template("""
 Extract appointment booking information from the user's message.
@@ -61,6 +87,10 @@ def extract_info(state):
         # Check specialization availability using RAG data
         specialization = extracted_info.get("specialization")
         doctor_name = extracted_info.get("doctor_name")
+
+        # Fallback: If LLM didn't extract specialization, try to find it in user input
+        if not specialization:
+            specialization = _extract_specialization_from_input(state.user_input)
 
         if specialization and rag_db:
             state.requested_specialization = specialization
