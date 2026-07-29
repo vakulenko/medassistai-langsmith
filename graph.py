@@ -6,9 +6,43 @@ from response_generator import generate_response
 from langsmith import traceable
 from trello_tools import create_appointment_card, create_fraud_card, create_add_patient_card, cancel_appointment_card
 
+def set_confirmation_flags(state: ChatState):
+    """Set confirmation flags based on state."""
+    # Check for pending confirmations
+    if state.appointment_ready_for_confirmation:
+        return state
+
+    if state.cancel_ready_for_confirmation:
+        return state
+
+    if state.detected_intent == Intent.BOOK_APPOINTMENT:
+        # If deceased patient detected, ask for confirmation (but will create fraud ticket)
+        if state.is_deceased_patient:
+            state.appointment_ready_for_confirmation = True
+
+        # Check if all required info is present (including Patient ID)
+        required_fields = ["patient_name", "patient_email", "doctor_name", "appointment_date", "appointment_time"]
+        missing_fields = [f for f in required_fields if not state.extracted_info.get(f)]
+
+        # If patient not found AND we have patient name + email + doctor, go to confirmation
+        if state.patient_not_found:
+            if state.extracted_info.get("patient_name") and state.extracted_info.get("patient_email"):
+                state.appointment_ready_for_confirmation = True
+        elif state.patient_id and not missing_fields:
+            # All info present - ask for explicit confirmation
+            state.appointment_ready_for_confirmation = True
+
+    elif state.detected_intent == Intent.CANCEL_APPOINTMENT:
+        # Check if we have patient identifier (name or ID)
+        if state.patient_id or state.extracted_info.get("patient_name"):
+            state.cancel_ready_for_confirmation = True
+
+    return state
+
+
 @traceable(name="should_continue", run_type="chain")
 def should_continue(state: ChatState):
-    """Determine if booking flow should continue or end."""
+    """Determine routing based on state."""
     # CRITICAL: Check for pending confirmations even if intent is UNKNOWN
     # This handles Message 2 responses like "Approve" which get UNKNOWN intent
     if state.appointment_ready_for_confirmation:
@@ -18,11 +52,6 @@ def should_continue(state: ChatState):
         return "ask_for_cancellation_confirmation"
 
     if state.detected_intent == Intent.BOOK_APPOINTMENT:
-        # If deceased patient detected, ask for confirmation (but will create fraud ticket)
-        if state.is_deceased_patient:
-            state.appointment_ready_for_confirmation = True
-            return "ask_for_confirmation"
-
         # Check if specialization is not available (we cannot help)
         if state.requested_specialization and not state.has_available_doctor:
             return END
@@ -36,23 +65,19 @@ def should_continue(state: ChatState):
             return "ask_for_info"
 
         # If patient not found AND we have patient name + email + doctor, go to confirmation
-        # (missing fields don't matter for new patient)
         if state.patient_not_found:
             if state.extracted_info.get("patient_name") and state.extracted_info.get("patient_email"):
-                state.appointment_ready_for_confirmation = True
                 return "ask_for_confirmation"
             return "ask_for_info"
 
         if not missing_fields:
             # All info present - ask for explicit confirmation
-            state.appointment_ready_for_confirmation = True
             return "ask_for_confirmation"
         return "ask_for_info"
 
     elif state.detected_intent == Intent.CANCEL_APPOINTMENT:
         # Check if we have patient identifier (name or ID)
         if state.patient_id or state.extracted_info.get("patient_name"):
-            state.cancel_ready_for_confirmation = True
             return "ask_for_cancellation_confirmation"
         return "ask_for_info"
 
@@ -222,6 +247,7 @@ def build_graph():
     workflow.add_node("detect_intent", detect_intent)
     workflow.add_node("extract_info", extract_info)
     workflow.add_node("generate_response", generate_response)
+    workflow.add_node("set_flags", set_confirmation_flags)
     workflow.add_node("ask_for_info", lambda state: state)
     workflow.add_node("ask_for_confirmation", lambda state: state)
     workflow.add_node("ask_for_cancellation_confirmation", lambda state: state)
@@ -239,8 +265,9 @@ def build_graph():
     workflow.add_edge("detect_intent", "extract_info")
     workflow.add_edge("extract_info", "check_fraud")
     workflow.add_edge("check_fraud", "generate_response")
+    workflow.add_edge("generate_response", "set_flags")
     workflow.add_conditional_edges(
-        "generate_response",
+        "set_flags",
         should_continue,
         {
             "ask_for_info": END,
