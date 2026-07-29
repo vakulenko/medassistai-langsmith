@@ -36,7 +36,7 @@ def get_list_id(board_id: str, list_name: str = "In Queue") -> Optional[str]:
 
         return None
     except Exception as e:
-        print(f"Error getting list ID: {str(e)}")
+        print(f"[ERROR] Error getting list ID: {str(e)}")
         return None
 
 
@@ -67,12 +67,12 @@ def create_appointment_card(
     try:
         # Check if Trello credentials are configured
         if not TRELLO_BOARD_APPOINTMENTS:
-            print("❌ TRELLO_BOARD_APPOINTMENTS not configured in .env")
+            print("[ERROR] TRELLO_BOARD_APPOINTMENTS not configured in .env")
             return False
 
         list_id = get_list_id(TRELLO_BOARD_APPOINTMENTS, "In Queue")
         if not list_id:
-            print(f"❌ Could not find 'In Queue' list on board {TRELLO_BOARD_APPOINTMENTS}")
+            print(f"[ERROR] Could not find 'In Queue' list on board {TRELLO_BOARD_APPOINTMENTS}")
             print(f"   Check: board exists, 'In Queue' list exists, credentials are correct")
             return False
 
@@ -100,11 +100,11 @@ Reason: {reason}"""
         response = requests.post(url, params=params)
         response.raise_for_status()
 
-        print(f"✅ Created appointment card for {patient_name} with Dr. {doctor_name}")
+        print(f"[SUCCESS] Created appointment card for {patient_name} with Dr. {doctor_name}")
         return True
 
     except Exception as e:
-        print(f"❌ Error creating appointment card: {str(e)}")
+        print(f"[ERROR] Error creating appointment card: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
@@ -133,7 +133,7 @@ def create_fraud_card(
     try:
         list_id = get_list_id(TRELLO_BOARD_TICKETS, "In Queue")
         if not list_id:
-            print("Could not find 'In Queue' list on Tickets board")
+            print("[ERROR] Could not find 'In Queue' list on Tickets board")
             return False
 
         # Build card description
@@ -160,11 +160,11 @@ Session ID: {session_id}"""
         response = requests.post(url, params=params)
         response.raise_for_status()
 
-        print(f"Created fraud card for {patient_name}")
+        print(f"[SUCCESS] Created fraud card for {patient_name}")
         return True
 
     except Exception as e:
-        print(f"Error creating fraud card: {str(e)}")
+        print(f"[ERROR] Error creating fraud card: {str(e)}")
         return False
 
 

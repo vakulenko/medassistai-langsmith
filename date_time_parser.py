@@ -64,7 +64,7 @@ def parse_date_time(user_input: str) -> dict:
                 datetime.strptime(date_str, "%Y-%m-%d")
                 result["appointment_date"] = date_str
             except ValueError:
-                print(f"⚠️ Invalid date format: {date_str}")
+                print(f"[WARN] Invalid date format: {date_str}")
 
         if parsed.get("appointment_time"):
             time_str = parsed["appointment_time"]
@@ -73,15 +73,15 @@ def parse_date_time(user_input: str) -> dict:
                 datetime.strptime(time_str, "%H:%M")
                 result["appointment_time"] = time_str
             except ValueError:
-                print(f"⚠️ Invalid time format: {time_str}")
+                print(f"[WARN] Invalid time format: {time_str}")
 
         return result
 
     except json.JSONDecodeError as e:
-        print(f"❌ Error parsing date/time JSON: {e}")
+        print(f"[ERROR] Error parsing date/time JSON: {e}")
         return {"appointment_date": None, "appointment_time": None}
     except Exception as e:
-        print(f"❌ Error parsing date/time: {e}")
+        print(f"[ERROR] Error parsing date/time: {e}")
         return {"appointment_date": None, "appointment_time": None}
 
 
@@ -113,5 +113,5 @@ def format_appointment_date_time(date_str: str, time_str: str) -> str:
         return "Not specified"
 
     except Exception as e:
-        print(f"⚠️ Error formatting date/time: {e}")
+        print(f"[WARN] Error formatting date/time: {e}")
         return f"{date_str or 'N/A'} {time_str or 'N/A'}"
