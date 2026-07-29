@@ -18,6 +18,6 @@ def get_llm():
 
 if __name__ == "__main__":
     llm = get_llm()
-    print("✓ LLM initialized successfully")
+    print("[OK] LLM initialized successfully")
     print(f"Model: {GEMINI_MODEL}")
     print(f"LangSmith Tracing: Enabled")

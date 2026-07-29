@@ -278,4 +278,4 @@ def build_graph():
 graph = build_graph()
 
 if __name__ == "__main__":
-    print("✓ Graph initialized successfully")
+    print("[OK] Graph initialized successfully")

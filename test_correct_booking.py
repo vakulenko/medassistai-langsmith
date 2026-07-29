@@ -52,9 +52,9 @@ print(f"  Is deceased: {result1.get('is_deceased_patient')}")
 
 response1 = result1.get('last_response', '')
 if 'confirm' in response1.lower() or 'approve' in response1.lower():
-    print(f"  → Bot is asking for confirmation")
+    print(f"  -> Bot is asking for confirmation")
 else:
-    print(f"  → Bot says: {response1[:150]}...")
+    print(f"  -> Bot says: {response1[:150]}...")
 
 booking_state = {
     "patient_id": result1.get("patient_id"),

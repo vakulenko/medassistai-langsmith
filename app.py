@@ -29,12 +29,11 @@ rag_available = load_rag_data()
 # Streamlit configuration
 st.set_page_config(
     page_title="MedAssistAI - Doctor Appointment Booking",
-    page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("🏥 MedAssistAI Chatbot")
+st.title("MedAssistAI Chatbot")
 st.markdown("### Book Your Doctor Appointment in Minutes")
 
 # Initialize session state
@@ -55,14 +54,14 @@ if "booking_state" not in st.session_state:
 
 # Sidebar with session management
 with st.sidebar:
-    st.markdown("### 📋 Sessions")
+    st.markdown("### Sessions")
 
     # New session button
     col1, col2 = st.columns([3, 1])
     with col1:
         new_session_name = st.text_input("Session name", placeholder="My Session", key="new_session_input")
     with col2:
-        if st.button("➕ New", use_container_width=True):
+        if st.button("+ New", use_container_width=True):
             if new_session_name.strip():
                 new_session = SessionManager.create_session(new_session_name.strip())
                 st.session_state.sessions[new_session.session_id] = new_session
@@ -90,16 +89,16 @@ with st.sidebar:
     # Delete session button
     st.divider()
     if len(st.session_state.sessions) > 1:
-        if st.button("🗑️ Delete Current Session", use_container_width=True):
+        if st.button("[DEL] Delete Current Session", use_container_width=True):
             del st.session_state.sessions[st.session_state.active_session_id]
             st.session_state.active_session_id = list(st.session_state.sessions.keys())[0]
             st.rerun()
 
     st.divider()
 
-    st.markdown("### 📚 RAG System")
+    st.markdown("### RAG System")
     if rag_available:
-        st.caption("✅ Vector database loaded - using doctor & patient context")
+        st.caption("[OK] Vector database loaded - using doctor & patient context")
         try:
             rag_db = initialize_rag_db()
             stats = rag_db.get_db_stats()
@@ -108,24 +107,24 @@ with st.sidebar:
         except:
             pass
     else:
-        st.caption("⚠️ Vector database not available")
+        st.caption("[WARN] Vector database not available")
 
     st.divider()
 
-    st.markdown("### 🔍 LangSmith Integration")
+    st.markdown("### LangSmith Integration")
     st.caption("All conversations are traced for debugging")
 
     langsmith_url = get_langsmith_project_url()
-    if st.button("🚀 Open LangSmith Studio", use_container_width=True):
+    if st.button("[LINK] Open LangSmith Studio", use_container_width=True):
         st.write(f"[Open LangSmith Studio]({langsmith_url})")
 
-    with st.expander("📊 LangSmith Info", expanded=False):
+    with st.expander("[INFO] LangSmith Info", expanded=False):
         st.markdown(f"**Project:** `{os.getenv('LANGSMITH_PROJECT', 'medassistai-chatbot')}`")
         st.markdown(f"**Endpoint:** `{os.getenv('LANGSMITH_ENDPOINT', 'https://api.smith.langchain.com')}`")
-        st.markdown(f"**Tracing:** Enabled ✓")
+        st.markdown(f"**Tracing:** Enabled [OK]")
 
 # Main chat interface
-st.subheader(f"💬 Conversation - {active_session.name}")
+st.subheader(f"Conversation - {active_session.name}")
 chat_container = st.container(height=400, border=True)
 
 for message in active_session.chat_history:
@@ -170,7 +169,7 @@ if user_input:
     with st.spinner("Processing your request..."):
         try:
             # DEBUG: Show input state
-            with st.expander("🔍 Debug: Input State"):
+            with st.expander("[DEBUG] Input State"):
                 st.write(f"**Intent:** {chat_state.detected_intent}")
                 st.write(f"**Patient ID:** {chat_state.patient_id}")
                 st.write(f"**Confirmation Ready:** {chat_state.appointment_ready_for_confirmation}")
@@ -180,7 +179,7 @@ if user_input:
             result = graph.invoke(chat_state)
 
             # DEBUG: Show result state
-            with st.expander("🔍 Debug: Result State"):
+            with st.expander("[DEBUG] Result State"):
                 st.write(f"**Booking Confirmed:** {result.get('booking_confirmed', False)}")
                 st.write(f"**Patient ID:** {result.get('patient_id')}")
                 st.write(f"**Appointment Ready:** {result.get('appointment_ready_for_confirmation', False)}")
@@ -224,7 +223,7 @@ if user_input:
             }
 
             # DEBUG: Show saved state
-            with st.expander("🔍 Debug: Saved Booking State"):
+            with st.expander("[DEBUG] Saved Booking State"):
                 st.json(st.session_state.booking_state)
 
             # Log successful execution to LangSmith
@@ -237,8 +236,8 @@ if user_input:
 
             # Display booking status if applicable
             if result.get("booking_confirmed"):
-                st.success("✅ Appointment booking confirmed!")
-                with st.expander("📅 Booking Details"):
+                st.success("Appointment booking confirmed!")
+                with st.expander("Booking Details"):
                     booking_details = {
                         "doctor": result.get("extracted_info", {}).get("doctor_name"),
                         "date": result.get("extracted_info", {}).get("appointment_date"),
@@ -246,10 +245,10 @@ if user_input:
                         "reason": result.get("extracted_info", {}).get("reason"),
                     }
                     st.json(booking_details)
-                    st.info(f"📋 Trello Card should have been created with: Date={booking_details['date']}, Time={booking_details['time']}")
+                    st.info(f"Trello Card should have been created with: Date={booking_details['date']}, Time={booking_details['time']}")
 
         except Exception as e:
-            error_msg = f"❌ Error: {str(e)}"
+            error_msg = f"Error: {str(e)}"
             st.error(error_msg)
             active_session.chat_history.append({
                 "role": "assistant",
@@ -268,7 +267,7 @@ if user_input:
     st.rerun()
 
 # Footer with debugging info
-with st.expander("🔧 Debug Information"):
+with st.expander("[DEBUG] Information"):
     col_debug1, col_debug2 = st.columns(2)
     with col_debug1:
         st.subheader("LangSmith Project")
@@ -285,7 +284,7 @@ with st.expander("🔧 Debug Information"):
         st.code(f"{len(st.session_state.sessions)}")
 
     st.divider()
-    st.subheader("🔍 Chat State")
+    st.subheader("Chat State")
     st.json({
         "session_id": st.session_state.active_session_id,
         "messages_count": len(active_session.chat_history),

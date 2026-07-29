@@ -49,7 +49,7 @@ def main():
         print("[ERROR] app.py not found")
         sys.exit(1)
 
-    print("✓ app.py found")
+    print("[OK] app.py found")
     print()
 
     print("=" * 70)
@@ -59,9 +59,9 @@ def main():
     print("Opening at: http://localhost:8501")
     print()
     print("Features:")
-    print("  • Chat with the appointment booking agent")
-    print("  • Manage multiple chat sessions")
-    print("  • Traces sent to LangSmith Cloud automatically")
+    print("  - Chat with the appointment booking agent")
+    print("  - Manage multiple chat sessions")
+    print("  - Traces sent to LangSmith Cloud automatically")
     print()
     print("For debugging with LangSmith Studio, use: python debug.py")
     print()

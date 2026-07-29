@@ -110,7 +110,7 @@ def validate_patient_id(patient_id: str, patient_data: str) -> Tuple[bool, bool]
     for line in lines:
         if patient_id_lower in line:
             # Check for deceased markers on the same line
-            if any(marker in line for marker in ['deceased', 'deceases', 'died', 'death', 'expired', '†']):
+            if any(marker in line for marker in ['deceased', 'deceases', 'died', 'death', 'expired', '']):
                 return True, True
 
     return True, False

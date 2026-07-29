@@ -35,29 +35,29 @@ def main():
     print("Checking requirements...")
 
     if not Path(".env").exists():
-        print("✗ ERROR: .env file not found")
+        print("[ERROR] ERROR: .env file not found")
         print("Please create .env with your API keys")
         sys.exit(1)
 
     api_key = os.getenv("LANGSMITH_API_KEY")
     if not api_key:
-        print("✗ ERROR: LANGSMITH_API_KEY not set in .env")
+        print("[ERROR] ERROR: LANGSMITH_API_KEY not set in .env")
         sys.exit(1)
 
-    print("✓ .env configured")
-    print("✓ LANGSMITH_API_KEY set")
+    print("[OK] .env configured")
+    print("[OK] LANGSMITH_API_KEY set")
 
     if not Path("langgraph.json").exists():
-        print("✗ ERROR: langgraph.json not found")
+        print("[ERROR] ERROR: langgraph.json not found")
         sys.exit(1)
 
-    print("✓ langgraph.json found")
+    print("[OK] langgraph.json found")
 
     if not Path("graph.py").exists():
-        print("✗ ERROR: graph.py not found")
+        print("[ERROR] ERROR: graph.py not found")
         sys.exit(1)
 
-    print("✓ graph.py found")
+    print("[OK] graph.py found")
     print()
 
     print("=" * 70)
