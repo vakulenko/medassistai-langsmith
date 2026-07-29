@@ -68,7 +68,6 @@ booking_state = {
     "is_deceased_patient": result1.get("is_deceased_patient", False),
     "patient_not_found": result1.get("patient_not_found", False),
     "should_add_patient": result1.get("should_add_patient", False),
-    "cancel_ready_for_confirmation": result1.get("cancel_ready_for_confirmation", False),
 }
 
 print(f"\nState saved for next message:")
@@ -103,7 +102,6 @@ state2 = ChatState(
     is_deceased_patient=booking_state.get("is_deceased_patient", False),
     patient_not_found=booking_state.get("patient_not_found", False),
     should_add_patient=booking_state.get("should_add_patient", False),
-    cancel_ready_for_confirmation=booking_state.get("cancel_ready_for_confirmation", False),
 )
 
 print(f"\nBefore graph.invoke():")
