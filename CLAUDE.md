@@ -1,92 +1,85 @@
-# MedAssistAI LangSmith Chatbot - Claude.md
+# MedAssistAI Chatbot - Project Guidelines
 
-## Project Overview
+## Overview
 
-This is a conversational AI chatbot for doctor appointment booking, built with Streamlit, LangGraph, Google Gemini, and LangSmith tracing.
+Educational chatbot for doctor appointment booking using Streamlit, LangGraph, Gemini, and LangSmith Studio.
 
 ## Collaboration Guidelines
 
-### Git & Commits
-- **Do NOT commit changes automatically.** Only create commits when explicitly requested by the user.
-- This preserves the user's control over version history and staging decisions.
-- When asked to commit, review staged changes and create clear, descriptive commit messages.
+**Git & Commits:**
+- No automatic commits. Only on explicit request.
+- Review staged changes before committing.
+- Write clear, descriptive commit messages.
 
-### Code Changes
-- Prioritize fixing bugs and implementing requested features
-- Test changes in the running application before reporting completion
-- Use the existing architectural patterns established in the codebase
-- **This is an educational example application.** Do not overcomplicate design. Keep code simple, readable, and understandable for learning purposes.
+**Code Changes:**
+- Fix bugs and implement features using existing patterns.
+- Test UI changes in running app before reporting completion.
+- Keep code simple and readable (educational example).
 
-### Testing
-- For UI changes: start the dev server and manually test in browser
-- Check for regressions in core functionality (chatbot responses, message history)
-- Verify LangSmith tracing is working
+**Documentation:**
+- Keep README.md focused and under 400 lines.
+- Link between docs instead of duplicating.
+- Use clear, concise language.
 
-### Documentation Rules
-- **Maximum 400 lines per .md file.** If a file exceeds 400 lines, move content to a new .md file and link it from the original.
-- **Avoid duplication.** Do not repeat information across multiple .md files. Link to the source document instead.
-- Keep documentation clear and concise for educational clarity.
+## Quick Start
+
+```bash
+# Debug with LangSmith Studio (development)
+debug.bat
+
+# Run chatbot (regular use)
+chatbot.bat
+```
+
+See README.md for details.
 
 ## Project Structure
 
 ```
 medassistai-langsmith/
-├── app.py                    # Main Streamlit UI with session management
-├── graph.py                  # LangGraph workflow
-├── state.py                  # Chat state models, Session class, SessionManager
-├── config.py                 # Configuration (models, API keys)
-├── llm_setup.py             # LLM initialization
-├── intent_detector.py       # Intent detection module
-├── info_extractor.py        # Information extraction
-├── response_generator.py    # Response generation
-├── appointment_manager.py   # Trello integration
-├── start.bat                # Windows launch script
-├── requirements.txt         # Dependencies
-├── .env                     # Environment variables (local)
-└── README.md               # Documentation
+├── debug.py / debug.bat      # LangSmith Studio debugging
+├── chatbot.py / chatbot.bat  # Streamlit chatbot UI
+├── app.py                    # Streamlit application
+├── graph.py                  # LangGraph agent
+├── state.py                  # State models & sessions
+├── config.py                 # Configuration
+├── llm_setup.py              # LLM setup
+├── intent_detector.py        # Intent detection
+├── info_extractor.py         # Info extraction
+├── response_generator.py     # Response generation
+├── langsmith_debug.py        # LangSmith utilities
+├── langgraph.json            # LangGraph config
+└── requirements.txt          # Dependencies
 ```
 
-## Current LLM Setup
+## Key Technologies
 
-- **Model**: Google Gemini 3.6 Flash
-- **Configuration**: Disabled sampling parameters (fixed defaults)
-- **Response Format**: Dict with 'text' key for text content
+- **Frontend**: Streamlit
+- **Agent**: LangGraph
+- **LLM**: Google Gemini 3.6 Flash
+- **Tracing**: LangSmith Studio
+- **Integration**: Trello, Google Drive
 
-## Known Patterns
+## Environment Variables
 
-### Response Parsing
-The LLM returns responses as dicts with structure: `{'type': 'text', 'text': '...', 'extras': {...}}`
-- Use `_extract_text()` helper from intent_detector.py to safely extract text
-- Handles dict, list, and string response formats
+Required:
+- `GOOGLE_API_KEY` - Gemini API
+- `LANGSMITH_API_KEY` - LangSmith tracing
 
-### UI Layout
-- Conversation takes full-width display
-- Sidebar contains session management controls (create, switch, delete)
-- Chat messages displayed via Streamlit's `chat_message()` component
+Optional:
+- `TRELLO_*` - Appointment storage
+- `GOOGLE_DRIVE_LINK_*` - Doctor profiles
 
-### Session Management
-- Sessions stored in `st.session_state.sessions` (dict keyed by session ID)
-- Active session tracked in `st.session_state.active_session_id`
-- Each session has: `chat_history`, `conversation_history`, `name`, `session_id`, `created_at`
-- UI allows creating named sessions, switching between them, and deleting (safe delete—cannot delete last session)
+## Session Management
 
-## Development Commands
+- Sessions stored in Streamlit state
+- Each session has isolated chat history
+- Create, switch, delete via UI
+- Safe delete (can't delete last session)
 
-```bash
-# Start application (Windows)
-start.bat
+## Development
 
-# Start application (Linux/macOS)
-streamlit run app.py
-
-# Run tests
-python -m pytest tests/
-```
-
-## Environment Variables Required
-
-- `GOOGLE_API_KEY` - Google Gemini API key
-- `LANGSMITH_API_KEY` - LangSmith tracing API key
-- `LANGSMITH_ENDPOINT` - LangSmith endpoint (EU: https://eu.api.smith.langchain.com)
-- `TRELLO_API_KEY`, `TRELLO_API_TOKEN`, `TRELLO_BOARD_APPOINTMENTS` - Trello integration
-- `GOOGLE_DRIVE_LINK_*` - Doctor profile links
+Use `debug.bat` for development with:
+- Real-time LangSmith Studio tracing
+- Hot-reload on code changes
+- Full agent execution visualization
