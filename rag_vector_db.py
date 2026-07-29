@@ -52,7 +52,7 @@ class RAGVectorDB:
                 embeddings = GoogleGenerativeAIEmbeddings(model=model, google_api_key=GOOGLE_API_KEY)
                 # Test the model
                 test_embedding = embeddings.embed_query("test")
-                print(f"✅ Using embedding model: {model}")
+                print(f"[OK] Using embedding model: {model}")
                 break
             except Exception as e:
                 continue
@@ -74,14 +74,14 @@ class RAGVectorDB:
                 embedding_function=self.embeddings,
                 collection_name="medassistai"
             )
-            print(f"✓ Loaded existing vector database from {self.persist_dir}")
+            print(f"[OK] Loaded existing vector database from {self.persist_dir}")
         else:
             self.vector_store = Chroma(
                 persist_directory=self.persist_dir,
                 embedding_function=self.embeddings,
                 collection_name="medassistai"
             )
-            print(f"✓ Created new vector database at {self.persist_dir}")
+            print(f"[OK] Created new vector database at {self.persist_dir}")
 
     def add_documents(self, documents: Dict[str, str], chunk_size: int = 1000, chunk_overlap: int = 200):
         """Add documents to vector store."""
@@ -111,9 +111,9 @@ class RAGVectorDB:
         if all_docs:
             self.vector_store.add_documents(all_docs)
             # Note: Newer Chroma versions auto-persist, no need to call persist()
-            print(f"✓ Added {len(all_docs)} chunks to vector database")
+            print(f"[OK] Added {len(all_docs)} chunks to vector database")
         else:
-            print("✗ No documents to add")
+            print("[WARN] No documents to add")
 
     def retrieve_relevant_context(self, query: str, top_k: int = 5) -> List[str]:
         """Retrieve relevant context for a query."""
@@ -165,7 +165,7 @@ class RAGVectorDB:
             if os.path.exists(self.persist_dir):
                 shutil.rmtree(self.persist_dir)
             self.load_or_create_db()
-            print(f"✓ Cleared vector database")
+            print(f"[OK] Cleared vector database")
 
     def get_db_stats(self) -> Dict:
         """Get statistics about vector database."""
