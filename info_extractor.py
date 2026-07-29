@@ -199,11 +199,4 @@ def extract_info(state):
                 state.patient_not_found = True
                 state.should_add_patient = True
 
-    # Handle cancellation requests
-    if state.detected_intent == Intent.CANCEL_APPOINTMENT:
-        # Extract patient name or ID to identify which appointment to cancel
-        patient_name = extracted_info.get("patient_name")
-        if patient_name or state.patient_id:
-            state.cancel_ready_for_confirmation = True
-
     return state

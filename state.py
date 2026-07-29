@@ -8,7 +8,6 @@ class Intent(str, Enum):
     BOOK_APPOINTMENT = "book_appointment"
     VIEW_DOCTORS = "view_doctors"
     CHECK_AVAILABILITY = "check_availability"
-    CANCEL_APPOINTMENT = "cancel_appointment"
     GENERAL_INFO = "general_info"
     UNKNOWN = "unknown"
 
@@ -41,8 +40,6 @@ class ChatState:
     is_deceased_patient: bool = False
     patient_not_found: bool = False
     should_add_patient: bool = False
-    cancel_ready_for_confirmation: bool = False
-    target_appointment_id: Optional[str] = None
 
 @dataclass
 class Session:

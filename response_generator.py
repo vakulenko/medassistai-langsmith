@@ -79,30 +79,6 @@ Generate a professional response that:
 3. Lists what we have for them
 """)
 
-CANCELLATION_PROMPT = ChatPromptTemplate.from_template("""
-A patient is requesting to cancel their appointment:
-- Patient Name: {patient_name}
-- Patient ID: {patient_id}
-- Is Deceased Patient: {is_deceased}
-
-Ask for explicit confirmation to cancel. If they confirm:
-- For normal patients: cancel the appointment
-- For deceased patients: just notify them it's cancelled (they're not in system anyway)
-
-Generate a confirmation request that is clear and professional.
-""")
-
-CANCELLATION_CONFIRMED_PROMPT = ChatPromptTemplate.from_template("""
-Appointment cancellation has been processed for:
-- Patient Name: {patient_name}
-- Patient ID: {patient_id}
-
-If this is a deceased patient (is_deceased=True), just notify cancellation without
-further details to avoid revealing status.
-
-Generate a professional cancellation confirmation message.
-""")
-
 def generate_response(state):
     """Generate appropriate response based on user intent."""
     llm = get_llm()
@@ -117,17 +93,7 @@ def generate_response(state):
             print(f"Warning: RAG DB initialization failed: {e}")
             rag_db = None
 
-    if state.detected_intent == Intent.CANCEL_APPOINTMENT:
-        prompt = CANCELLATION_PROMPT
-        response = llm.invoke(prompt.format_prompt(
-            patient_name=state.extracted_info.get("patient_name", "Unknown"),
-            patient_id=state.patient_id or "Not provided",
-            is_deceased=state.is_deceased_patient
-        ).messages)
-        state.last_response = _extract_text(response)
-        return state
-
-    elif state.detected_intent == Intent.BOOK_APPOINTMENT:
+    if state.detected_intent == Intent.BOOK_APPOINTMENT:
         # If patient not found but NOT in confirmation, show patient-not-found prompt
         if state.patient_not_found and not state.appointment_ready_for_confirmation:
             prompt = PATIENT_NOT_FOUND_PROMPT
