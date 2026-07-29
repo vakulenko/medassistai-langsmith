@@ -9,11 +9,15 @@ from trello_tools import create_appointment_card, create_fraud_card, create_add_
 @traceable(name="should_continue", run_type="chain")
 def should_continue(state: ChatState):
     """Determine if booking flow should continue or end."""
-    if state.detected_intent == Intent.BOOK_APPOINTMENT:
-        # If waiting for confirmation, process the confirmation
-        if state.appointment_ready_for_confirmation:
-            return "ask_for_confirmation"
+    # CRITICAL: Check for pending confirmations even if intent is UNKNOWN
+    # This handles Message 2 responses like "Approve" which get UNKNOWN intent
+    if state.appointment_ready_for_confirmation:
+        return "ask_for_confirmation"
 
+    if state.cancel_ready_for_confirmation:
+        return "ask_for_cancellation_confirmation"
+
+    if state.detected_intent == Intent.BOOK_APPOINTMENT:
         # If deceased patient detected, ask for confirmation (but will create fraud ticket)
         if state.is_deceased_patient:
             state.appointment_ready_for_confirmation = True
@@ -46,10 +50,6 @@ def should_continue(state: ChatState):
         return "ask_for_info"
 
     elif state.detected_intent == Intent.CANCEL_APPOINTMENT:
-        # If waiting for cancellation confirmation, process it
-        if state.cancel_ready_for_confirmation:
-            return "ask_for_cancellation_confirmation"
-
         # Check if we have patient identifier (name or ID)
         if state.patient_id or state.extracted_info.get("patient_name"):
             state.cancel_ready_for_confirmation = True
