@@ -49,6 +49,10 @@ if "active_session_id" not in st.session_state:
 # Get active session
 active_session = st.session_state.sessions[st.session_state.active_session_id]
 
+# Initialize booking state for current session (persists across messages)
+if "booking_state" not in st.session_state:
+    st.session_state.booking_state = {}
+
 # Sidebar with session management
 with st.sidebar:
     st.markdown("### 📋 Sessions")
@@ -144,12 +148,19 @@ if user_input:
         "content": user_input
     })
 
-    # Create chat state
+    # Create chat state, restore from session if available
     chat_state = ChatState(
         messages=active_session.chat_history,
         user_input=user_input,
         conversation_history=active_session.conversation_history,
-        available_doctors=list(DOCTOR_PROFILES.keys())
+        available_doctors=list(DOCTOR_PROFILES.keys()),
+        patient_id=st.session_state.booking_state.get("patient_id"),
+        extracted_info=st.session_state.booking_state.get("extracted_info", {}),
+        use_rag_context=st.session_state.booking_state.get("use_rag_context", False),
+        requested_specialization=st.session_state.booking_state.get("requested_specialization"),
+        has_available_doctor=st.session_state.booking_state.get("has_available_doctor", False),
+        appointment_ready_for_confirmation=st.session_state.booking_state.get("appointment_ready_for_confirmation", False),
+        is_deceased_patient=st.session_state.booking_state.get("is_deceased_patient", False),
     )
 
     # Process through LangGraph
@@ -179,6 +190,17 @@ if user_input:
                 "role": "assistant",
                 "content": assistant_response
             })
+
+            # Save booking state for next message
+            st.session_state.booking_state = {
+                "patient_id": result.get("patient_id"),
+                "extracted_info": result.get("extracted_info", {}),
+                "use_rag_context": result.get("use_rag_context", False),
+                "requested_specialization": result.get("requested_specialization"),
+                "has_available_doctor": result.get("has_available_doctor", False),
+                "appointment_ready_for_confirmation": result.get("appointment_ready_for_confirmation", False),
+                "is_deceased_patient": result.get("is_deceased_patient", False),
+            }
 
             # Log successful execution to LangSmith
             detected_intent = result.get("detected_intent", Intent.UNKNOWN).value if result.get("detected_intent") else "unknown"
