@@ -45,7 +45,7 @@ def log_agent_run(session_id: str, intent: str, success: bool, error: str = None
             metadata=metadata,
         )
     except Exception as e:
-        print(f"⚠️ Failed to log to LangSmith: {str(e)}")
+        print(f"[WARN] Failed to log to LangSmith: {str(e)}")
 
 def get_langsmith_project_url():
     """Get the LangSmith Studio URL for the current project."""
@@ -60,11 +60,11 @@ def list_recent_runs(limit: int = 10):
         )
         return list(runs)
     except Exception as e:
-        print(f"⚠️ Failed to fetch runs from LangSmith: {str(e)}")
+        print(f"[WARN] Failed to fetch runs from LangSmith: {str(e)}")
         return []
 
 if __name__ == "__main__":
     initialize_langsmith_tracing()
-    print(f"✓ LangSmith initialized for project: {LANGSMITH_PROJECT}")
-    print(f"✓ Endpoint: {LANGSMITH_ENDPOINT}")
-    print(f"✓ Studio URL: {get_langsmith_project_url()}")
+    print(f"[OK] LangSmith initialized for project: {LANGSMITH_PROJECT}")
+    print(f"[OK] Endpoint: {LANGSMITH_ENDPOINT}")
+    print(f"[OK] Studio URL: {get_langsmith_project_url()}")
