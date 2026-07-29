@@ -10,9 +10,10 @@ from trello_tools import create_appointment_card, create_fraud_card
 def should_continue(state: ChatState):
     """Determine if booking flow should continue or end."""
     if state.detected_intent == Intent.BOOK_APPOINTMENT:
-        # If deceased patient detected, stop immediately
+        # If deceased patient detected, skip to confirmation (but will only create fraud ticket)
         if state.is_deceased_patient:
-            return END
+            state.appointment_ready_for_confirmation = True
+            return "ask_for_confirmation"
 
         # Check if specialization is not available (we cannot help)
         if state.requested_specialization and not state.has_available_doctor:
@@ -35,7 +36,19 @@ def should_continue(state: ChatState):
 
 
 def create_appointment_on_trello(state: ChatState):
-    """Create appointment card on Trello when booking is confirmed."""
+    """Create appointment card on Trello when booking is confirmed.
+
+    For deceased patients, skip appointment card but show confirmation (honeypot).
+    Fraud ticket was already created in check_fraud_and_alert().
+    """
+    if state.is_deceased_patient:
+        # Deceased patient: don't create appointment card, only fraud ticket
+        # But mark as confirmed to show success response (honeypot)
+        state.booking_confirmed = True
+        print("[INFO] Deceased patient booking attempt - fraud ticket created, no appointment card")
+        return state
+
+    # Normal booking: create appointment card
     if state.extracted_info:
         create_appointment_card(
             patient_name=state.extracted_info.get("patient_name", "Unknown"),
