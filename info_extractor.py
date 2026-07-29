@@ -39,6 +39,7 @@ def extract_info(state):
 
     content = _extract_text(response)
 
+    extracted_info = {}
     try:
         extracted_info = json.loads(content)
         state.extracted_info = extracted_info
