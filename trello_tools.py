@@ -59,14 +59,21 @@ def create_appointment_card(
         appointment_time: Appointment time
         reason: Reason for appointment
         patient_email: Patient's email (optional)
+        patient_id: Patient's ID (optional)
 
     Returns:
         True if card created successfully, False otherwise
     """
     try:
+        # Check if Trello credentials are configured
+        if not TRELLO_BOARD_APPOINTMENTS:
+            print("❌ TRELLO_BOARD_APPOINTMENTS not configured in .env")
+            return False
+
         list_id = get_list_id(TRELLO_BOARD_APPOINTMENTS, "In Queue")
         if not list_id:
-            print("Could not find 'In Queue' list on Appointments board")
+            print(f"❌ Could not find 'In Queue' list on board {TRELLO_BOARD_APPOINTMENTS}")
+            print(f"   Check: board exists, 'In Queue' list exists, credentials are correct")
             return False
 
         # Build card description
@@ -93,11 +100,13 @@ Reason: {reason}"""
         response = requests.post(url, params=params)
         response.raise_for_status()
 
-        print(f"Created appointment card for {patient_name}")
+        print(f"✅ Created appointment card for {patient_name} with Dr. {doctor_name}")
         return True
 
     except Exception as e:
-        print(f"Error creating appointment card: {str(e)}")
+        print(f"❌ Error creating appointment card: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
