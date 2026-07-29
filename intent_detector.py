@@ -46,22 +46,25 @@ def extract_patient_id(text: str) -> str:
     """Extract Patient ID from user input.
 
     Looks for patterns like:
-    - "ID: P12345"
-    - "Patient ID: P12345"
-    - "ID P12345"
-    - "my ID is P12345"
+    - "patient ID: P001"
+    - "ID: P001"
+    - "patient ID P001"
+    - "my ID is P001"
     """
-    # Try different patterns
+    # Try different patterns, most specific first
     patterns = [
-        r'(?:patient\s+)?id\s*:\s*([A-Za-z0-9]+)',
-        r'(?:patient\s+)?id\s+([A-Za-z0-9]+)',
-        r'my\s+id\s+(?:is\s+)?([A-Za-z0-9]+)',
+        r'(?:patient\s+)?id\s*:\s*([A-Z0-9]+)',  # ID: XXXX or patient ID: XXXX
+        r'my\s+(?:patient\s+)?id\s+(?:is\s+)?([A-Z0-9]+)',  # my ID is XXXX or my patient ID XXXX
+        r'(?:patient\s+)?id\s+(?:is\s+)?([A-Z0-9]+)',  # ID XXXX or patient ID XXXX
     ]
 
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
-            return match.group(1).upper()
+            captured = match.group(1)
+            # Verify it looks like a patient ID (starts with P and followed by digits)
+            if re.match(r'P\d+', captured, re.IGNORECASE):
+                return captured.upper()
 
     return None
 
