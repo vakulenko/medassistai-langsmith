@@ -17,6 +17,7 @@ PATIENT IDENTIFICATION:
 - Patient ID: {patient_id}
 - Patient Name: {patient_name}
 - Patient Email: {patient_email}
+- Patient Status: {patient_status}
 
 APPOINTMENT DETAILS:
 - Requested Doctor: {doctor_name}
@@ -38,6 +39,7 @@ INSTRUCTIONS:
 3. If requested specialization is NOT available, explain we cannot help
 4. Once all details are confirmed, ask explicit approval to proceed
 5. Never proceed without explicit user confirmation
+6. If patient status is "New (not in system)", mention they will be registered
 
 User message: {user_input}
 Conversation: {conversation_history}
@@ -126,8 +128,8 @@ def generate_response(state):
         return state
 
     elif state.detected_intent == Intent.BOOK_APPOINTMENT:
-        # If patient not found, use different prompt
-        if state.patient_not_found:
+        # If patient not found but NOT in confirmation, show patient-not-found prompt
+        if state.patient_not_found and not state.appointment_ready_for_confirmation:
             prompt = PATIENT_NOT_FOUND_PROMPT
             extracted = state.extracted_info
             response = llm.invoke(prompt.format_prompt(
@@ -160,10 +162,14 @@ def generate_response(state):
                 patient_info = rag_db.get_patient_info(extracted.get("patient_name"))
                 patient_context = patient_info or "Patient information from records"
 
+        # Determine patient status
+        patient_status = "New (not in system)" if state.patient_not_found else "Existing patient"
+
         response = llm.invoke(prompt.format_prompt(
             patient_id=state.patient_id or "Not provided",
             patient_name=extracted.get("patient_name", "Not provided"),
             patient_email=extracted.get("patient_email", "Not provided"),
+            patient_status=patient_status,
             doctor_name=extracted.get("doctor_name", "Not specified"),
             appointment_date=extracted.get("appointment_date", "Not specified"),
             appointment_time=extracted.get("appointment_time", "Not specified"),

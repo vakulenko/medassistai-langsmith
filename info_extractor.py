@@ -77,6 +77,20 @@ def extract_info(state):
         if date_time_result.get("appointment_time"):
             extracted_info["appointment_time"] = date_time_result["appointment_time"]
 
+        # Fallback: Extract patient name from input if LLM didn't get it
+        if not extracted_info.get("patient_name"):
+            # Look for patterns like "My name is X", "I'm X", "name: X"
+            patterns = [
+                r'(?:my\s+)?name\s+(?:is\s+)?([A-Za-z\s]+?)(?:;|,|\.|\s+(?:email|id|patient))',
+                r"i'm\s+([A-Za-z\s]+?)(?:;|,|\.|\s+(?:email|id|patient))",
+                r'(?:patient\s+)?name\s*:\s*([A-Za-z\s]+?)(?:;|,|\.)',
+            ]
+            for pattern in patterns:
+                match = re.search(pattern, state.user_input, re.IGNORECASE)
+                if match:
+                    extracted_info["patient_name"] = match.group(1).strip().title()
+                    break
+
         state.extracted_info = extracted_info
     except json.JSONDecodeError:
         state.extracted_info = {}
@@ -116,17 +130,25 @@ def extract_info(state):
             try:
                 from rag_vector_db import initialize_rag_db
                 rag_db = initialize_rag_db()
+                # Use direct patient lookup, not semantic search
                 patient_data = rag_db.get_patient_info(state.patient_id)
 
                 if patient_data:
                     patient_exists, is_deceased = validate_patient_id(state.patient_id, patient_data)
                     if not patient_exists:
+                        # Patient ID not found in data
                         state.patient_not_found = True
                         state.should_add_patient = True
                     if is_deceased:
                         state.is_deceased_patient = True
+                else:
+                    # No patient data returned = patient not in system
+                    state.patient_not_found = True
+                    state.should_add_patient = True
             except Exception as e:
-                pass  # Continue even if patient validation fails
+                # If lookup fails, assume patient not in system
+                state.patient_not_found = True
+                state.should_add_patient = True
 
     # Handle cancellation requests
     if state.detected_intent == Intent.CANCEL_APPOINTMENT:

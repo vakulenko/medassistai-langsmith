@@ -27,6 +27,14 @@ def should_continue(state: ChatState):
         if not state.patient_id:
             return "ask_for_info"
 
+        # If patient not found AND we have patient name + email + doctor, go to confirmation
+        # (missing fields don't matter for new patient)
+        if state.patient_not_found:
+            if state.extracted_info.get("patient_name") and state.extracted_info.get("patient_email"):
+                state.appointment_ready_for_confirmation = True
+                return "ask_for_confirmation"
+            return "ask_for_info"
+
         if not missing_fields:
             # All info present - ask for explicit confirmation
             state.appointment_ready_for_confirmation = True
