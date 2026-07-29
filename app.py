@@ -169,8 +169,23 @@ if user_input:
     # Process through LangGraph
     with st.spinner("Processing your request..."):
         try:
+            # DEBUG: Show input state
+            with st.expander("🔍 Debug: Input State"):
+                st.write(f"**Intent:** {chat_state.detected_intent}")
+                st.write(f"**Patient ID:** {chat_state.patient_id}")
+                st.write(f"**Confirmation Ready:** {chat_state.appointment_ready_for_confirmation}")
+                st.write(f"**Extracted Info:** {chat_state.extracted_info}")
+
             # Invoke the graph with the current state
             result = graph.invoke(chat_state)
+
+            # DEBUG: Show result state
+            with st.expander("🔍 Debug: Result State"):
+                st.write(f"**Booking Confirmed:** {result.get('booking_confirmed', False)}")
+                st.write(f"**Patient ID:** {result.get('patient_id')}")
+                st.write(f"**Appointment Ready:** {result.get('appointment_ready_for_confirmation', False)}")
+                st.write(f"**Extracted Info:** {result.get('extracted_info', {})}")
+                st.write(f"**Intent:** {result.get('detected_intent')}")
 
             # Extract the response
             assistant_response = result.get("last_response", "I apologize, I couldn't process your request. Please try again.")
@@ -208,6 +223,10 @@ if user_input:
                 "cancel_ready_for_confirmation": result.get("cancel_ready_for_confirmation", False),
             }
 
+            # DEBUG: Show saved state
+            with st.expander("🔍 Debug: Saved Booking State"):
+                st.json(st.session_state.booking_state)
+
             # Log successful execution to LangSmith
             detected_intent = result.get("detected_intent", Intent.UNKNOWN).value if result.get("detected_intent") else "unknown"
             log_agent_run(
@@ -220,12 +239,14 @@ if user_input:
             if result.get("booking_confirmed"):
                 st.success("✅ Appointment booking confirmed!")
                 with st.expander("📅 Booking Details"):
-                    st.json({
+                    booking_details = {
                         "doctor": result.get("extracted_info", {}).get("doctor_name"),
                         "date": result.get("extracted_info", {}).get("appointment_date"),
                         "time": result.get("extracted_info", {}).get("appointment_time"),
                         "reason": result.get("extracted_info", {}).get("reason"),
-                    })
+                    }
+                    st.json(booking_details)
+                    st.info(f"📋 Trello Card should have been created with: Date={booking_details['date']}, Time={booking_details['time']}")
 
         except Exception as e:
             error_msg = f"❌ Error: {str(e)}"

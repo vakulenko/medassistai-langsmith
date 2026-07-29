@@ -84,16 +84,19 @@ def create_appointment_on_trello(state: ChatState):
     # Normal booking: create appointment card
     extracted = state.extracted_info or {}
 
-    # Log what we're about to create
-    print(f"[DEBUG] Creating appointment card:")
-    print(f"        patient_name: {extracted.get('patient_name', 'Unknown')}")
-    print(f"        doctor_name: {extracted.get('doctor_name', 'Unknown')}")
-    print(f"        appointment_date: {extracted.get('appointment_date', 'Unknown')}")
-    print(f"        appointment_time: {extracted.get('appointment_time', 'Unknown')}")
-    print(f"        patient_id: {state.patient_id}")
+    print(f"\n{'='*80}")
+    print(f"[TRELLO] Attempting to create appointment card")
+    print(f"[TRELLO] Patient Name: {extracted.get('patient_name', 'Unknown')}")
+    print(f"[TRELLO] Doctor Name: {extracted.get('doctor_name', 'Unknown')}")
+    print(f"[TRELLO] Date: {extracted.get('appointment_date', 'Unknown')}")
+    print(f"[TRELLO] Time: {extracted.get('appointment_time', 'Unknown')}")
+    print(f"[TRELLO] Patient ID: {state.patient_id}")
+    print(f"[TRELLO] Extracted Info Keys: {list(extracted.keys())}")
+    print(f"{'='*80}\n")
 
     if extracted or state.patient_id:  # Check if we have SOME data
-        create_appointment_card(
+        print(f"[TRELLO] Creating card...")
+        success = create_appointment_card(
             patient_name=extracted.get("patient_name", "Unknown"),
             doctor_name=extracted.get("doctor_name", "Unknown"),
             appointment_date=extracted.get("appointment_date", "Unknown"),
@@ -102,10 +105,11 @@ def create_appointment_on_trello(state: ChatState):
             patient_email=extracted.get("patient_email"),
             patient_id=state.patient_id
         )
+        print(f"[TRELLO] Card creation result: {success}\n")
 
         # If patient not found in system, create add-patient card as well
         if state.patient_not_found:
-            print(f"[DEBUG] Creating add-patient card for {extracted.get('patient_name', 'Unknown')}")
+            print(f"[TRELLO] Creating add-patient card for {extracted.get('patient_name', 'Unknown')}")
             create_add_patient_card(
                 patient_name=extracted.get("patient_name", "Unknown"),
                 patient_email=extracted.get("patient_email"),
@@ -114,9 +118,10 @@ def create_appointment_on_trello(state: ChatState):
             )
 
         state.booking_confirmed = True
-        print(f"[INFO] Appointment booking confirmed for {extracted.get('patient_name', 'Unknown')}")
+        print(f"[TRELLO] Booking confirmed for {extracted.get('patient_name', 'Unknown')}")
     else:
-        print(f"[WARN] No extracted info available for appointment card creation")
+        print(f"[TRELLO] ERROR: No extracted info available for card creation")
+        print(f"[TRELLO] extracted={extracted}, patient_id={state.patient_id}\n")
 
     return state
 
