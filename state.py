@@ -33,6 +33,12 @@ class ChatState:
     conversation_history: List[dict] = field(default_factory=list)
     booking_confirmed: bool = False
     last_response: str = ""
+    patient_id: Optional[str] = None
+    use_rag_context: bool = False
+    requested_specialization: Optional[str] = None
+    has_available_doctor: bool = False
+    appointment_ready_for_confirmation: bool = False
+    is_deceased_patient: bool = False
 
 @dataclass
 class Session:

@@ -11,35 +11,38 @@ except Exception as e:
     initialize_rag_db = None
 
 BOOKING_PROMPT = ChatPromptTemplate.from_template("""
-You are a helpful medical appointment booking assistant for MedAssistAI.
+You are a medical appointment booking assistant for MedAssistAI.
 
-Current extracted information:
+PATIENT IDENTIFICATION:
+- Patient ID: {patient_id}
 - Patient Name: {patient_name}
 - Patient Email: {patient_email}
-- Preferred Doctor: {doctor_name}
-- Preferred Date: {appointment_date}
-- Preferred Time: {appointment_time}
+
+APPOINTMENT DETAILS:
+- Requested Doctor: {doctor_name}
+- Requested Date: {appointment_date}
+- Requested Time: {appointment_time}
 - Reason for Visit: {appointment_reason}
 
-Available Doctors: {available_doctors}
+SPECIALIZATION CHECK:
+- Requested Specialization: {specialization}
+- Available: {has_doctor}
 
-Relevant Doctor Information:
+DOCTOR & PATIENT CONTEXT:
 {doctor_context}
-
-Relevant Patient Information:
 {patient_context}
 
-User's latest message: {user_input}
-Conversation history: {conversation_history}
+INSTRUCTIONS:
+1. Patient ID must be provided - ask for it if missing
+2. Prioritize contextual information from doctor profiles and patient data
+3. If requested specialization is NOT available, explain we cannot help
+4. Once all details are confirmed, ask explicit approval to proceed
+5. Never proceed without explicit user confirmation
 
-Based on the information above and the user's message, provide a helpful response that:
-1. Confirms what information you've collected
-2. Asks for any missing critical information
-3. Suggests available options if needed
-4. Use the doctor and patient information to provide personalized recommendations
-5. Is warm and professional
+User message: {user_input}
+Conversation: {conversation_history}
 
-If all required information is present, confirm the appointment details and indicate the booking is ready.
+Respond helpfully and professionally.
 """)
 
 GENERAL_PROMPT = ChatPromptTemplate.from_template("""
@@ -76,31 +79,35 @@ def generate_response(state):
         prompt = BOOKING_PROMPT
         extracted = state.extracted_info
 
-        # Get RAG context
+        # Check if doctor/patient request (use RAG priority)
         doctor_context = ""
         patient_context = ""
-        if rag_db:
+
+        if state.use_rag_context and rag_db:
+            # PRIORITIZE RAG CONTEXT for doctor/patient data
             doctor_name = extracted.get("doctor_name", "")
             if doctor_name:
                 doc_info = rag_db.get_doctor_info(doctor_name)
-                doctor_context = doc_info or "No specific information found"
-            else:
-                # Generic doctor query
-                doctor_context_list = rag_db.retrieve_relevant_context("doctor availability specialties", top_k=2)
-                doctor_context = "\n".join(doctor_context_list) if doctor_context_list else "Available information about doctors"
+                doctor_context = doc_info or "Doctor information from records"
 
-            patient_name = extracted.get("patient_name", "")
-            if patient_name:
-                patient_info = rag_db.get_patient_info(patient_name)
-                patient_context = patient_info or "No specific patient information found"
+            # Get patient info by ID first, then by name
+            if state.patient_id:
+                patient_info = rag_db.get_patient_info(state.patient_id)
+                patient_context = patient_info or "Patient information from records"
+            elif extracted.get("patient_name"):
+                patient_info = rag_db.get_patient_info(extracted.get("patient_name"))
+                patient_context = patient_info or "Patient information from records"
 
         response = llm.invoke(prompt.format_prompt(
+            patient_id=state.patient_id or "Not provided",
             patient_name=extracted.get("patient_name", "Not provided"),
             patient_email=extracted.get("patient_email", "Not provided"),
             doctor_name=extracted.get("doctor_name", "Not specified"),
             appointment_date=extracted.get("appointment_date", "Not specified"),
             appointment_time=extracted.get("appointment_time", "Not specified"),
             appointment_reason=extracted.get("reason", "Not specified"),
+            specialization=state.requested_specialization or "Not specified",
+            has_doctor="Yes" if state.has_available_doctor else "No",
             available_doctors=", ".join(available_doctors),
             doctor_context=doctor_context,
             patient_context=patient_context,

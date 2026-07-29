@@ -46,7 +46,8 @@ def create_appointment_card(
     appointment_date: str,
     appointment_time: str,
     reason: str,
-    patient_email: Optional[str] = None
+    patient_email: Optional[str] = None,
+    patient_id: Optional[str] = None
 ) -> bool:
     """
     Create an appointment card on the "In Queue" list of Appointments board.
@@ -69,7 +70,8 @@ def create_appointment_card(
             return False
 
         # Build card description
-        description = f"""Patient: {patient_name}
+        description = f"""Patient ID: {patient_id or 'Not provided'}
+Patient: {patient_name}
 Doctor: {doctor_name}
 Date: {appointment_date}
 Time: {appointment_time}

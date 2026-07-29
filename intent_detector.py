@@ -1,6 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 from llm_setup import get_llm
 from state import Intent
+import re
 
 INTENT_DETECTION_PROMPT = ChatPromptTemplate.from_template("""
 Analyze the user's message and determine their intent for booking a doctor appointment.
@@ -32,7 +33,37 @@ def detect_intent(state):
         detected_intent = Intent.UNKNOWN
 
     state.detected_intent = detected_intent
+
+    # Extract patient ID if present (format: "ID: XXXXX" or "Patient ID: XXXXX")
+    patient_id = extract_patient_id(state.user_input)
+    if patient_id:
+        state.patient_id = patient_id
+
     return state
+
+
+def extract_patient_id(text: str) -> str:
+    """Extract Patient ID from user input.
+
+    Looks for patterns like:
+    - "ID: P12345"
+    - "Patient ID: P12345"
+    - "ID P12345"
+    - "my ID is P12345"
+    """
+    # Try different patterns
+    patterns = [
+        r'(?:patient\s+)?id\s*:\s*([A-Za-z0-9]+)',
+        r'(?:patient\s+)?id\s+([A-Za-z0-9]+)',
+        r'my\s+id\s+(?:is\s+)?([A-Za-z0-9]+)',
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return match.group(1).upper()
+
+    return None
 
 
 def _extract_text(response):
