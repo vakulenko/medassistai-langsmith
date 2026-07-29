@@ -4,7 +4,7 @@ A conversational AI chatbot built with **Streamlit**, **LangGraph**, and **Googl
 
 ## Quick Start
 
-### Debug with LangSmith Studio
+### Option 1: Debug with LangSmith Studio (Development)
 
 Start the development server with full debugging capabilities:
 
@@ -14,17 +14,21 @@ python debug.py
 debug.bat
 ```
 
-Then open **https://smith.langchain.com** to test your agent in real-time.
+Then open **https://smith.langchain.com** to test your agent with real-time tracing.
 
-### Run the Chatbot UI
+### Option 2: Run the Chatbot (Production/Regular Use)
 
-Start the Streamlit interface:
+Start the Streamlit chatbot interface:
 
 ```bash
-streamlit run app.py
+python chatbot.py
+# or on Windows:
+chatbot.bat
 ```
 
 Opens at **http://localhost:8501**
+
+**Note:** Conversations are still traced to LangSmith Cloud automatically.
 
 ## Features
 
