@@ -82,27 +82,42 @@ def create_appointment_on_trello(state: ChatState):
         return state
 
     # Normal booking: create appointment card
-    if state.extracted_info:
+    extracted = state.extracted_info or {}
+
+    # Log what we're about to create
+    print(f"[DEBUG] Creating appointment card:")
+    print(f"        patient_name: {extracted.get('patient_name', 'Unknown')}")
+    print(f"        doctor_name: {extracted.get('doctor_name', 'Unknown')}")
+    print(f"        appointment_date: {extracted.get('appointment_date', 'Unknown')}")
+    print(f"        appointment_time: {extracted.get('appointment_time', 'Unknown')}")
+    print(f"        patient_id: {state.patient_id}")
+
+    if extracted or state.patient_id:  # Check if we have SOME data
         create_appointment_card(
-            patient_name=state.extracted_info.get("patient_name", "Unknown"),
-            doctor_name=state.extracted_info.get("doctor_name", "Unknown"),
-            appointment_date=state.extracted_info.get("appointment_date", "Unknown"),
-            appointment_time=state.extracted_info.get("appointment_time", "Unknown"),
-            reason=state.extracted_info.get("reason", "General checkup"),
-            patient_email=state.extracted_info.get("patient_email"),
+            patient_name=extracted.get("patient_name", "Unknown"),
+            doctor_name=extracted.get("doctor_name", "Unknown"),
+            appointment_date=extracted.get("appointment_date", "Unknown"),
+            appointment_time=extracted.get("appointment_time", "Unknown"),
+            reason=extracted.get("reason", "General checkup"),
+            patient_email=extracted.get("patient_email"),
             patient_id=state.patient_id
         )
 
         # If patient not found in system, create add-patient card as well
         if state.patient_not_found:
+            print(f"[DEBUG] Creating add-patient card for {extracted.get('patient_name', 'Unknown')}")
             create_add_patient_card(
-                patient_name=state.extracted_info.get("patient_name", "Unknown"),
-                patient_email=state.extracted_info.get("patient_email"),
+                patient_name=extracted.get("patient_name", "Unknown"),
+                patient_email=extracted.get("patient_email"),
                 patient_id=state.patient_id,
-                notes=f"New patient booking: {state.extracted_info.get('reason', 'General')}"
+                notes=f"New patient booking: {extracted.get('reason', 'General')}"
             )
 
         state.booking_confirmed = True
+        print(f"[INFO] Appointment booking confirmed for {extracted.get('patient_name', 'Unknown')}")
+    else:
+        print(f"[WARN] No extracted info available for appointment card creation")
+
     return state
 
 

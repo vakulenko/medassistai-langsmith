@@ -75,11 +75,13 @@ def extract_info(state):
         extracted_info.update(new_info)
 
         # Parse natural language dates/times to strict format
-        date_time_result = parse_date_time(state.user_input)
-        if date_time_result.get("appointment_date"):
-            extracted_info["appointment_date"] = date_time_result["appointment_date"]
-        if date_time_result.get("appointment_time"):
-            extracted_info["appointment_time"] = date_time_result["appointment_time"]
+        # Only update if not already extracted (preserve previously parsed dates/times)
+        if not extracted_info.get("appointment_date") or not extracted_info.get("appointment_time"):
+            date_time_result = parse_date_time(state.user_input)
+            if date_time_result.get("appointment_date") and not extracted_info.get("appointment_date"):
+                extracted_info["appointment_date"] = date_time_result["appointment_date"]
+            if date_time_result.get("appointment_time") and not extracted_info.get("appointment_time"):
+                extracted_info["appointment_time"] = date_time_result["appointment_time"]
 
         # Fallback: Extract patient name from input if LLM didn't get it
         if not extracted_info.get("patient_name"):
