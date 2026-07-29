@@ -168,6 +168,114 @@ Session ID: {session_id}"""
         return False
 
 
+def create_add_patient_card(
+    patient_name: str,
+    patient_email: Optional[str] = None,
+    patient_id: Optional[str] = None,
+    age: Optional[str] = None,
+    notes: Optional[str] = None
+) -> bool:
+    """
+    Create a card to add new patient to patient list.
+
+    Args:
+        patient_name: Patient's full name
+        patient_email: Patient's email (optional)
+        patient_id: Requested patient ID (optional)
+        age: Patient's age (optional)
+        notes: Additional notes (optional)
+
+    Returns:
+        True if card created successfully, False otherwise
+    """
+    try:
+        list_id = get_list_id(TRELLO_BOARD_TICKETS, "In Queue")
+        if not list_id:
+            print(f"[ERROR] Could not find 'In Queue' list on Tickets board")
+            return False
+
+        # Build card description
+        description = f"""Patient Name: {patient_name}
+Request Type: Add to Patient List"""
+
+        if patient_id:
+            description += f"\nRequested Patient ID: {patient_id}"
+        if patient_email:
+            description += f"\nEmail: {patient_email}"
+        if age:
+            description += f"\nAge: {age}"
+        if notes:
+            description += f"\nNotes: {notes}"
+
+        # Create card
+        url = "https://api.trello.com/1/cards"
+        params = {
+            "key": TRELLO_API_KEY,
+            "token": TRELLO_API_TOKEN,
+            "idList": list_id,
+            "name": f"[ADD PATIENT] {patient_name}",
+            "desc": description
+        }
+
+        response = requests.post(url, params=params)
+        response.raise_for_status()
+
+        print(f"[SUCCESS] Created add-patient card for {patient_name}")
+        return True
+
+    except Exception as e:
+        print(f"[ERROR] Error creating add-patient card: {str(e)}")
+        return False
+
+
+def cancel_appointment_card(
+    patient_name: str,
+    patient_id: Optional[str] = None
+) -> bool:
+    """
+    Create a card to track appointment cancellation request.
+
+    Args:
+        patient_name: Patient's full name
+        patient_id: Patient's ID (optional)
+
+    Returns:
+        True if card created successfully, False otherwise
+    """
+    try:
+        list_id = get_list_id(TRELLO_BOARD_APPOINTMENTS, "In Queue")
+        if not list_id:
+            print(f"[ERROR] Could not find 'In Queue' list on Appointments board")
+            return False
+
+        # Build card description
+        description = f"""Patient Name: {patient_name}
+Request Type: Cancellation"""
+
+        if patient_id:
+            description += f"\nPatient ID: {patient_id}"
+
+        # Create card
+        url = "https://api.trello.com/1/cards"
+        params = {
+            "key": TRELLO_API_KEY,
+            "token": TRELLO_API_TOKEN,
+            "idList": list_id,
+            "name": f"[CANCEL] {patient_name}",
+            "desc": description
+        }
+
+        response = requests.post(url, params=params)
+        response.raise_for_status()
+
+        print(f"[SUCCESS] Created cancellation card for {patient_name}")
+        return True
+
+    except Exception as e:
+        print(f"[ERROR] Error creating cancellation card: {str(e)}")
+        return False
+
+
 # Tool definitions for LangGraph
 TRELLO_TOOLS = [
     {

@@ -4,7 +4,7 @@ from intent_detector import detect_intent
 from info_extractor import extract_info
 from response_generator import generate_response
 from langsmith import traceable
-from trello_tools import create_appointment_card, create_fraud_card
+from trello_tools import create_appointment_card, create_fraud_card, create_add_patient_card, cancel_appointment_card
 
 @traceable(name="should_continue", run_type="chain")
 def should_continue(state: ChatState):
@@ -32,6 +32,14 @@ def should_continue(state: ChatState):
             state.appointment_ready_for_confirmation = True
             return "ask_for_confirmation"
         return "ask_for_info"
+
+    elif state.detected_intent == Intent.CANCEL_APPOINTMENT:
+        # Check if we have patient identifier (name or ID)
+        if state.patient_id or state.extracted_info.get("patient_name"):
+            state.cancel_ready_for_confirmation = True
+            return "ask_for_cancellation_confirmation"
+        return "ask_for_info"
+
     return END
 
 
@@ -40,6 +48,7 @@ def create_appointment_on_trello(state: ChatState):
 
     For deceased patients, skip appointment card but show confirmation (honeypot).
     Fraud ticket was already created in check_fraud_and_alert().
+    If patient not found in system, also create add-patient card.
     """
     if state.is_deceased_patient:
         # Deceased patient: don't create appointment card, only fraud ticket
@@ -59,7 +68,55 @@ def create_appointment_on_trello(state: ChatState):
             patient_email=state.extracted_info.get("patient_email"),
             patient_id=state.patient_id
         )
+
+        # If patient not found in system, create add-patient card as well
+        if state.patient_not_found:
+            create_add_patient_card(
+                patient_name=state.extracted_info.get("patient_name", "Unknown"),
+                patient_email=state.extracted_info.get("patient_email"),
+                patient_id=state.patient_id,
+                notes=f"New patient booking: {state.extracted_info.get('reason', 'General')}"
+            )
+
         state.booking_confirmed = True
+    return state
+
+
+def handle_cancellation_confirmation(state: ChatState):
+    """Handle user confirmation for appointment cancellation."""
+    user_input_lower = state.user_input.lower().strip()
+
+    # Check for approval keywords
+    if any(keyword in user_input_lower for keyword in ["yes", "approve", "confirm", "agree", "ok", "okay", "go ahead"]):
+        return "process_cancellation"
+    elif any(keyword in user_input_lower for keyword in ["no", "reject", "cancel", "decline", "stop"]):
+        return "reject_cancellation"
+    else:
+        # Unclear response, ask again
+        return END
+
+
+def process_cancellation(state: ChatState):
+    """Process appointment cancellation request."""
+    # If deceased patient, just show success without actually cancelling
+    if state.is_deceased_patient:
+        state.last_response = "Appointment cancellation completed. Thank you."
+        print("[INFO] Deceased patient cancellation request - ignoring (not in system)")
+        return state
+
+    # For normal patients, create cancellation card
+    cancel_appointment_card(
+        patient_name=state.extracted_info.get("patient_name", "Unknown"),
+        patient_id=state.patient_id
+    )
+
+    state.last_response = "Your appointment cancellation request has been recorded. A confirmation will be sent to you shortly."
+    return state
+
+
+def reject_cancellation(state: ChatState):
+    """Handle cancellation rejection."""
+    state.last_response = "Cancellation has been cancelled. Your appointment remains scheduled."
     return state
 
 
@@ -130,10 +187,13 @@ def build_graph():
     workflow.add_node("generate_response", generate_response)
     workflow.add_node("ask_for_info", lambda state: state)
     workflow.add_node("ask_for_confirmation", lambda state: state)
+    workflow.add_node("ask_for_cancellation_confirmation", lambda state: state)
     workflow.add_node("confirm_booking", lambda state: {**state.__dict__, "booking_confirmed": True})
     workflow.add_node("create_trello_card", create_appointment_on_trello)
     workflow.add_node("check_fraud", check_fraud_and_alert)
     workflow.add_node("reject_booking", reject_booking)
+    workflow.add_node("process_cancellation", process_cancellation)
+    workflow.add_node("reject_cancellation", reject_cancellation)
 
     # Set entry point
     workflow.set_entry_point("detect_intent")
@@ -148,6 +208,7 @@ def build_graph():
         {
             "ask_for_info": END,
             "ask_for_confirmation": "ask_for_confirmation",
+            "ask_for_cancellation_confirmation": "ask_for_cancellation_confirmation",
             "confirm_booking": "create_trello_card",
             END: END,
         }
@@ -161,8 +222,19 @@ def build_graph():
             END: END,
         }
     )
+    workflow.add_conditional_edges(
+        "ask_for_cancellation_confirmation",
+        handle_cancellation_confirmation,
+        {
+            "process_cancellation": "process_cancellation",
+            "reject_cancellation": "reject_cancellation",
+            END: END,
+        }
+    )
     workflow.add_edge("create_trello_card", END)
     workflow.add_edge("reject_booking", END)
+    workflow.add_edge("process_cancellation", END)
+    workflow.add_edge("reject_cancellation", END)
 
     return workflow.compile()
 

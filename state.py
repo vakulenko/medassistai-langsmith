@@ -39,6 +39,10 @@ class ChatState:
     has_available_doctor: bool = False
     appointment_ready_for_confirmation: bool = False
     is_deceased_patient: bool = False
+    patient_not_found: bool = False
+    should_add_patient: bool = False
+    cancel_ready_for_confirmation: bool = False
+    target_appointment_id: Optional[str] = None
 
 @dataclass
 class Session:

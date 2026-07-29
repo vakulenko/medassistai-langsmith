@@ -161,6 +161,9 @@ if user_input:
         has_available_doctor=st.session_state.booking_state.get("has_available_doctor", False),
         appointment_ready_for_confirmation=st.session_state.booking_state.get("appointment_ready_for_confirmation", False),
         is_deceased_patient=st.session_state.booking_state.get("is_deceased_patient", False),
+        patient_not_found=st.session_state.booking_state.get("patient_not_found", False),
+        should_add_patient=st.session_state.booking_state.get("should_add_patient", False),
+        cancel_ready_for_confirmation=st.session_state.booking_state.get("cancel_ready_for_confirmation", False),
     )
 
     # Process through LangGraph
@@ -200,6 +203,9 @@ if user_input:
                 "has_available_doctor": result.get("has_available_doctor", False),
                 "appointment_ready_for_confirmation": result.get("appointment_ready_for_confirmation", False),
                 "is_deceased_patient": result.get("is_deceased_patient", False),
+                "patient_not_found": result.get("patient_not_found", False),
+                "should_add_patient": result.get("should_add_patient", False),
+                "cancel_ready_for_confirmation": result.get("cancel_ready_for_confirmation", False),
             }
 
             # Log successful execution to LangSmith

@@ -120,9 +120,19 @@ def extract_info(state):
 
                 if patient_data:
                     patient_exists, is_deceased = validate_patient_id(state.patient_id, patient_data)
+                    if not patient_exists:
+                        state.patient_not_found = True
+                        state.should_add_patient = True
                     if is_deceased:
                         state.is_deceased_patient = True
             except Exception as e:
                 pass  # Continue even if patient validation fails
+
+    # Handle cancellation requests
+    if state.detected_intent == Intent.CANCEL_APPOINTMENT:
+        # Extract patient name or ID to identify which appointment to cancel
+        patient_name = extracted_info.get("patient_name")
+        if patient_name or state.patient_id:
+            state.cancel_ready_for_confirmation = True
 
     return state
