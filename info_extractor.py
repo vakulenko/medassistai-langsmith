@@ -66,9 +66,13 @@ def extract_info(state):
 
     content = _extract_text(response)
 
-    extracted_info = {}
+    # START with existing extracted info to preserve previous context
+    extracted_info = dict(state.extracted_info) if state.extracted_info else {}
+
     try:
-        extracted_info = json.loads(content)
+        new_info = json.loads(content)
+        # Merge new info with existing (new info takes precedence)
+        extracted_info.update(new_info)
 
         # Parse natural language dates/times to strict format
         date_time_result = parse_date_time(state.user_input)
@@ -93,7 +97,8 @@ def extract_info(state):
 
         state.extracted_info = extracted_info
     except json.JSONDecodeError:
-        state.extracted_info = {}
+        # Keep existing extracted_info on JSON parse error
+        pass
 
     # Determine if this request involves doctor/patient data (should use RAG)
     if state.detected_intent == Intent.BOOK_APPOINTMENT:
@@ -108,7 +113,8 @@ def extract_info(state):
             pass
 
         # Check specialization availability using RAG data
-        specialization = extracted_info.get("specialization")
+        # Use previously detected specialization if available
+        specialization = extracted_info.get("specialization") or state.requested_specialization
         doctor_name = extracted_info.get("doctor_name")
 
         # Fallback: If LLM didn't extract specialization, try to find it in user input
@@ -116,17 +122,22 @@ def extract_info(state):
             specialization = _extract_specialization_from_input(state.user_input)
 
         if specialization and rag_db:
-            state.requested_specialization = specialization
-            has_available, doctors = check_specialization_available(specialization, rag_db)
-            state.has_available_doctor = has_available
-            if has_available and doctors:
-                # Suggest the first available doctor
-                if not doctor_name:
-                    extracted_info["doctor_name"] = doctors[0]
-                    state.extracted_info = extracted_info
+            # Only re-check if specialization is new (different from previous)
+            if specialization != state.requested_specialization:
+                state.requested_specialization = specialization
+                has_available, doctors = check_specialization_available(specialization, rag_db)
+                state.has_available_doctor = has_available
+                if has_available and doctors:
+                    # Suggest the first available doctor
+                    if not doctor_name:
+                        extracted_info["doctor_name"] = doctors[0]
+                        state.extracted_info = extracted_info
+            else:
+                # Use previously detected availability (don't re-check)
+                pass
 
-        # Validate patient ID if provided
-        if state.patient_id:
+        # Validate patient ID if provided (only validate if not already validated)
+        if state.patient_id and not state.patient_not_found and not state.is_deceased_patient:
             try:
                 from rag_vector_db import initialize_rag_db
                 rag_db = initialize_rag_db()
