@@ -4,15 +4,13 @@ from dotenv import load_dotenv
 from graph import graph
 from state import ChatState, Intent, SessionManager, Session
 from config import DOCTOR_PROFILES
+from langsmith_debug import initialize_langsmith_tracing, get_langsmith_project_url, log_agent_run
 
 # Load environment variables
 load_dotenv()
 
 # Configure LangSmith for tracing
-os.environ["LANGSMITH_API_KEY"] = os.getenv("LANGSMITH_API_KEY")
-os.environ["LANGSMITH_ENDPOINT"] = os.getenv("LANGSMITH_ENDPOINT")
-os.environ["LANGSMITH_TRACING"] = "true"
-os.environ["LANGSMITH_PROJECT"] = "medassistai-chatbot"
+initialize_langsmith_tracing()
 
 # Streamlit configuration
 st.set_page_config(
@@ -80,7 +78,18 @@ with st.sidebar:
             st.rerun()
 
     st.divider()
-    st.caption("🔍 LangSmith Tracing Enabled - All conversations are tracked for quality assurance")
+
+    st.markdown("### 🔍 LangSmith Integration")
+    st.caption("All conversations are traced for debugging")
+
+    langsmith_url = get_langsmith_project_url()
+    if st.button("🚀 Open LangSmith Studio", use_container_width=True):
+        st.write(f"[Open LangSmith Studio]({langsmith_url})")
+
+    with st.expander("📊 LangSmith Info", expanded=False):
+        st.markdown(f"**Project:** `{os.getenv('LANGSMITH_PROJECT', 'medassistai-chatbot')}`")
+        st.markdown(f"**Endpoint:** `{os.getenv('LANGSMITH_ENDPOINT', 'https://api.smith.langchain.com')}`")
+        st.markdown(f"**Tracing:** Enabled ✓")
 
 # Main chat interface
 st.subheader(f"💬 Conversation - {active_session.name}")
@@ -142,6 +151,14 @@ if user_input:
                 "content": assistant_response
             })
 
+            # Log successful execution to LangSmith
+            detected_intent = result.get("detected_intent", Intent.UNKNOWN).value if result.get("detected_intent") else "unknown"
+            log_agent_run(
+                session_id=st.session_state.active_session_id,
+                intent=detected_intent,
+                success=True
+            )
+
             # Display booking status if applicable
             if result.get("booking_confirmed"):
                 st.success("✅ Appointment booking confirmed!")
@@ -160,6 +177,14 @@ if user_input:
                 "role": "assistant",
                 "content": error_msg
             })
+
+            # Log error to LangSmith
+            log_agent_run(
+                session_id=st.session_state.active_session_id,
+                intent="unknown",
+                success=False,
+                error=str(e)
+            )
 
     # Rerun to update the chat display
     st.rerun()
@@ -180,4 +205,12 @@ with st.expander("🔧 Debug Information"):
     with col_debug4:
         st.subheader("Total Sessions")
         st.code(f"{len(st.session_state.sessions)}")
+
+    st.divider()
+    st.subheader("🔍 Chat State")
+    st.json({
+        "session_id": st.session_state.active_session_id,
+        "messages_count": len(active_session.chat_history),
+        "conversation_history": len(active_session.conversation_history),
+    })
 

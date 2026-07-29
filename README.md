@@ -159,10 +159,25 @@ All conversations are automatically traced in LangSmith for:
 - **Monitoring**: Track conversation metrics and performance
 - **Quality Assurance**: Review conversations for improvement
 
+### Debugging with LangSmith Studio
+
+**In the App:**
+1. Click the "🚀 Open LangSmith Studio" button in the sidebar
+2. View real-time traces of agent execution
+3. Inspect individual steps: intent detection, info extraction, response generation
+
+**Key Features:**
+- **Session Tracking**: Each session ID is logged for easy filtering
+- **Intent Detection**: See what intent was detected for each user message
+- **Error Logging**: Failed requests are logged with error details
+- **Full Trace History**: View complete chain of LLM calls and their results
+
 ### Access LangSmith Dashboard
-1. Go to https://smith.langchain.com
-2. Navigate to the "medassistai-chatbot" project
-3. View traces, metrics, and conversation history
+1. Click the "🚀 Open LangSmith Studio" button in the sidebar OR
+2. Go to https://smith.langchain.com
+3. Navigate to the "medassistai-chatbot" project
+4. Filter by session ID to view conversation traces
+5. Click on a trace to inspect detailed execution steps
 
 ## Workflow Details
 
