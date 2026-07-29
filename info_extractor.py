@@ -2,6 +2,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from llm_setup import get_llm
 from intent_detector import _extract_text
 from patient_validator import check_specialization_available, validate_patient_id
+from date_time_parser import parse_date_time
 from state import Intent
 import json
 import re
@@ -68,6 +69,14 @@ def extract_info(state):
     extracted_info = {}
     try:
         extracted_info = json.loads(content)
+
+        # Parse natural language dates/times to strict format
+        date_time_result = parse_date_time(state.user_input)
+        if date_time_result.get("appointment_date"):
+            extracted_info["appointment_date"] = date_time_result["appointment_date"]
+        if date_time_result.get("appointment_time"):
+            extracted_info["appointment_time"] = date_time_result["appointment_time"]
+
         state.extracted_info = extracted_info
     except json.JSONDecodeError:
         state.extracted_info = {}

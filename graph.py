@@ -37,17 +37,10 @@ def should_continue(state: ChatState):
 def create_appointment_on_trello(state: ChatState):
     """Create appointment card on Trello when booking is confirmed."""
     if state.extracted_info:
-        from datetime import datetime, timedelta
-
-        # Handle relative dates like "Tomorrow"
-        appointment_date = state.extracted_info.get("appointment_date", "Unknown")
-        if appointment_date and appointment_date.lower() == "tomorrow":
-            appointment_date = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-
         create_appointment_card(
             patient_name=state.extracted_info.get("patient_name", "Unknown"),
             doctor_name=state.extracted_info.get("doctor_name", "Unknown"),
-            appointment_date=appointment_date,
+            appointment_date=state.extracted_info.get("appointment_date", "Unknown"),
             appointment_time=state.extracted_info.get("appointment_time", "Unknown"),
             reason=state.extracted_info.get("reason", "General checkup"),
             patient_email=state.extracted_info.get("patient_email"),
