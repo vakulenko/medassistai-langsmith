@@ -1,6 +1,6 @@
 # MedAssistAI Chatbot - Doctor Appointment Booking
 
-A conversational AI chatbot for booking doctor appointments, built with **Streamlit**, **LangGraph**, **Google Gemini**, and **LangSmith Studio**.
+A conversational AI chatbot for booking doctor appointments, built with **Streamlit**, **LangGraph**, and **Google Gemini**.
 
 ## Quick Start
 
@@ -15,177 +15,113 @@ A conversational AI chatbot for booking doctor appointments, built with **Stream
    ```env
    GOOGLE_API_KEY=your_gemini_api_key
    LANGSMITH_API_KEY=your_key
+   TRELLO_API_KEY=your_key
+   TRELLO_API_TOKEN=your_token
+   TRELLO_BOARD_APPOINTMENTS=board_id
+   TRELLO_BOARD_TICKETS=board_id
    ```
-
-3. **Setup RAG (optional):**
-   ```bash
-   python load_rag_data.py
-   ```
-   See [RAG_SETUP.md](RAG_SETUP.md) for configuration.
 
 ### Run Chatbot
 
 ```bash
-chatbot.bat
+python -m streamlit run app.py
 ```
 
 Opens at **http://localhost:8501**
 
-### Debug Mode
-
-```bash
-debug.bat
-```
-
-Opens development server for real-time debugging with LangSmith Studio.
-
 ## Features
 
-- 🤖 **Conversational Booking** - Intent detection and natural language understanding
-- 👨‍⚕️ **Multiple Doctors** - Support for multiple doctor profiles
-- 📋 **Session Management** - Create, switch, and delete independent chat sessions
-- 🔍 **LangSmith Integration** - Real-time tracing, monitoring, and debugging
-- 📝 **Appointment Tracking** - Store bookings in Trello (optional)
-- 📚 **RAG Context** - Google Drive integration for context-aware responses
+- **Conversational Booking** - Intent detection, multi-turn confirmation, and natural language understanding
+- **Multiple Doctors** - Support for multiple doctor profiles with specializations
+- **Session Management** - Create, switch, and delete independent chat sessions
+- **Appointment Tracking** - Automatic Trello card creation for confirmed bookings
+- **Fraud Detection** - Honeypot alerts for deceased patients and suspicious patterns
+- **Patient Registration** - Automatic patient add request for new patients
 
-## Architecture
+## How It Works
 
-```
-Google Drive
-    ↓
-Google Drive MCP (google_drive_mcp.py)
-    ↓ Downloads doctor profiles & patient data
-RAG Vector DB (rag_vector_db.py)
-    ↓ Semantic search with Chroma
-    ↓
-Streamlit UI (app.py)
-    ↓
-LangGraph Agent (graph.py)
-├── Intent Detection
-├── Information Extraction
-├── Response Generation (injected with RAG context)
-└── Appointment Confirmation
-    ↓
-LangSmith Tracing
-    ↓
-Trello Integration (optional)
-```
+1. User describes appointment needs in natural language
+2. Bot extracts patient info, preferred doctor, date, and time
+3. Bot confirms all details with user (multi-turn confirmation)
+4. User approves appointment
+5. Trello card automatically created with appointment details
+
+### Example Conversation
+
+**User:** "I need ophthalmologist tomorrow. Patient ID: P002. Name: Sergii Vakulenko. Email: test@test.com. At 12:34 PM"
+
+**Bot:** [Summarizes appointment details and asks for confirmation]
+
+**User:** "Approve"
+
+**Bot:** [Confirms booking, Trello card created automatically]
 
 ## Project Structure
 
 ```
 medassistai-langsmith/
-├── debug.py / debug.bat              # Start with LangSmith Studio
-├── chatbot.py / chatbot.bat          # Start regular chatbot
+├── chatbot.py / chatbot.bat          # Run chatbot
 ├── app.py                            # Streamlit UI
-├── graph.py                          # LangGraph agent
-├── state.py                          # State models & session management
+├── graph.py                          # LangGraph workflow
+├── state.py                          # State models
 ├── config.py                         # Configuration
-├── llm_setup.py                      # LLM initialization
+├── llm_setup.py                      # LLM setup
 ├── intent_detector.py                # Intent detection
 ├── info_extractor.py                 # Information extraction
+├── date_time_parser.py               # Date/time parsing
 ├── response_generator.py             # Response generation
+├── patient_validator.py              # Patient validation
+├── rag_vector_db.py                  # Vector database
+├── trello_tools.py                   # Trello integration
 ├── langsmith_debug.py                # LangSmith utilities
-├── google_drive_mcp.py               # Google Drive integration
-├── rag_vector_db.py                  # Vector database & RAG
-├── load_rag_data.py                  # Load Google Drive data into vector DB
-├── setup_google_drive.py             # Google Drive authentication setup
-├── test_rag.py                       # RAG system tests
-├── RAG_SETUP.md                      # Detailed RAG setup guide
-├── langgraph.json                    # LangGraph config
+├── load_rag_data.py                  # Load data into vector DB
 ├── requirements.txt                  # Dependencies
-└── .vector_db/                       # Chroma vector database (auto-created)
+└── .vector_db/                       # Chroma vector database
 ```
-
-## Development
-
-### With LangSmith Studio (Recommended)
-
-```bash
-debug.bat
-```
-
-Then open https://smith.langchain.com to:
-- Test your agent in the playground
-- View real-time execution traces
-- Monitor LLM calls and responses
-- Debug intent detection and extraction
-- See hot-reload as you edit code
-
-### Without Studio
-
-```bash
-chatbot.bat
-```
-
-Conversations are still traced to LangSmith Cloud automatically.
-
-## Session Management
-
-In the Streamlit UI:
-- **Create Session**: Enter name and click ➕ New
-- **Switch Session**: Use dropdown to switch between sessions
-- **Delete Session**: Click 🗑️ to delete current session
-
-Each session maintains its own conversation history and context.
 
 ## Configuration
 
-### RAG with Google Drive
-
-Configure in `.env`:
+### Environment Variables
 
 ```env
-GOOGLE_API_KEY=your_key
+# Required
+GOOGLE_API_KEY=your_gemini_api_key
+LANGSMITH_API_KEY=your_langsmith_key
 
-# Google Drive shared links
-GOOGLE_DRIVE_LINK_DR_WILLI_BEDNA=https://drive.google.com/file/d/.../view
-GOOGLE_DRIVE_LINK_DR_TERRY_KLOCK=https://drive.google.com/file/d/.../view
-GOOGLE_DRIVE_LINK_DR_JACKI_SENGE=https://drive.google.com/file/d/.../view
-GOOGLE_DRIVE_LINK_DR_DALLA_MCDER=https://drive.google.com/file/d/.../view
+# Trello (optional but recommended)
+TRELLO_API_KEY=your_trello_key
+TRELLO_API_TOKEN=your_trello_token
+TRELLO_BOARD_APPOINTMENTS=board_id_for_appointments
+TRELLO_BOARD_TICKETS=board_id_for_fraud_alerts
+
+# Google Drive RAG (optional)
 GOOGLE_DRIVE_LINK_PATIENT_DATA=https://drive.google.com/file/d/.../view
-```
-
-See [RAG_SETUP.md](RAG_SETUP.md) for details.
-
-### Optional Trello Integration
-
-```env
-TRELLO_API_KEY=your_key
-TRELLO_API_TOKEN=your_token
-TRELLO_BOARD_APPOINTMENTS=board_id
 ```
 
 ## Tech Stack
 
-- **Frontend**: Streamlit
+- **UI**: Streamlit
 - **LLM**: Google Gemini 3.6 Flash
-- **Orchestration**: LangGraph
+- **Workflow**: LangGraph
 - **Tracing**: LangSmith Studio
-- **RAG**: Chroma vector database with Google Gemini embeddings
-- **Data Source**: Google Drive with PDF/DOCX/PPTX support
-- **Integration**: Trello API, Google Drive MCP
+- **Data Integration**: Trello API
+- **Vector DB**: Chroma with Google Gemini embeddings
 
 ## Troubleshooting
 
-### LangSmith Not Tracing
-- Verify `LANGSMITH_API_KEY` in `.env`
-- Check internet connection
+### Trello Cards Not Creating
+- Verify `TRELLO_API_KEY` and `TRELLO_API_TOKEN` in `.env`
+- Check board IDs are correct
+- Ensure "In Queue" list exists on both boards
 
 ### Gemini API Errors
 - Verify `GOOGLE_API_KEY` is valid
-- Check API quotas in Google Cloud
+- Check API quotas in Google Cloud Console
 
 ### Scripts Won't Start
 - Verify `.env` file exists
 - Run: `pip install -r requirements.txt`
-- Check Python 3.11+ installed
-
-## Support
-
-1. Check LangSmith logs for error traces
-2. Review conversation history in the UI
-3. Verify environment variables are set correctly
+- Check Python 3.11+ is installed
 
 ## License
 
