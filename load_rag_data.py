@@ -27,7 +27,7 @@ def download_from_share_link(url: str) -> bytes:
     try:
         file_id = extract_file_id_from_url(url)
         if not file_id:
-            print(f"❌ Could not extract file ID from URL: {url}")
+            print(f"[ERROR] Could not extract file ID from URL: {url}")
             return None
 
         # Use export URL for direct download
@@ -39,11 +39,11 @@ def download_from_share_link(url: str) -> bytes:
         if response.status_code == 200:
             return response.content
         else:
-            print(f"   ❌ Download failed (status {response.status_code})")
+            print(f"   [ERROR] Download failed (status {response.status_code})")
             return None
 
     except Exception as e:
-        print(f"   ❌ Error downloading file: {e}")
+        print(f"   [ERROR] Error downloading file: {e}")
         return None
 
 
@@ -167,7 +167,7 @@ def load_doctor_profiles() -> Dict[str, str]:
 
     for doctor_name, drive_link in DOCTOR_PROFILES.items():
         if not drive_link:
-            print(f"   ⏭️  Skipping {doctor_name} (no link configured)")
+            print(f"   [SKIP]  Skipping {doctor_name} (no link configured)")
             continue
 
         print(f"   Loading {doctor_name}...")
@@ -178,11 +178,11 @@ def load_doctor_profiles() -> Dict[str, str]:
             content = extract_file_content(file_bytes, doctor_name)
             if content:
                 profiles[doctor_name] = content
-                print(f"   ✅ {doctor_name}")
+                print(f"   [OK] {doctor_name}")
             else:
-                print(f"   ❌ Could not extract text from {doctor_name}")
+                print(f"   [ERROR] Could not extract text from {doctor_name}")
         else:
-            print(f"   ❌ Could not download {doctor_name}")
+            print(f"   [ERROR] Could not download {doctor_name}")
 
     return profiles
 
@@ -190,7 +190,7 @@ def load_doctor_profiles() -> Dict[str, str]:
 def load_patient_data() -> str:
     """Load patient data from Google Drive shared link."""
     if not PATIENT_DATA_LINK:
-        print("   ⏭️  Patient data link not configured")
+        print("   [SKIP]  Patient data link not configured")
         return None
 
     print("   Loading patient data...")
@@ -200,34 +200,34 @@ def load_patient_data() -> str:
         # Try to extract without assuming file type (could be CSV, TXT, etc.)
         content = extract_file_content(file_bytes, "patient_data")
         if content:
-            print("   ✅ Patient data loaded")
+            print("   [OK] Patient data loaded")
             return content
         else:
-            print("   ❌ Could not extract text from patient data")
+            print("   [ERROR] Could not extract text from patient data")
     else:
-        print("   ❌ Could not download patient data")
+        print("   [ERROR] Could not download patient data")
 
     return None
 
 
 def load_rag_data(force_reload: bool = False):
     """Load Google Drive data into RAG vector database."""
-    print("\n📚 Loading RAG data from Google Drive...\n")
+    print("\n[DATA] Loading RAG data from Google Drive...\n")
 
     # Load doctor profiles
-    print("1️⃣  Loading doctor profiles...")
+    print("[1]  Loading doctor profiles...")
     doctor_profiles = load_doctor_profiles()
 
     if not doctor_profiles:
-        print("⚠️  No doctor profiles loaded")
+        print("[WARN]  No doctor profiles loaded")
         return
 
     # Load patient data
-    print("\n2️⃣  Loading patient data...")
+    print("\n[2]  Loading patient data...")
     patient_data = load_patient_data()
 
     # Prepare data for vector DB
-    print("\n3️⃣  Preparing data for vector database...")
+    print("\n[3]  Preparing data for vector database...")
     google_data = {
         "doctor_profiles": "\n\n".join(
             [f"## {name}\n{content}" for name, content in doctor_profiles.items()]
@@ -238,44 +238,44 @@ def load_rag_data(force_reload: bool = False):
         google_data["patient_data"] = patient_data
 
     # Initialize vector database (lazy import)
-    print("4️⃣  Initializing vector database...")
+    print("[4]  Initializing vector database...")
     try:
         from rag_vector_db import initialize_rag_db
         rag_db = initialize_rag_db()
     except ImportError as e:
-        print(f"❌ Error: RAG vector DB not available: {e}")
+        print(f"[ERROR] Error: RAG vector DB not available: {e}")
         print("   Run: pip install -r requirements.txt")
         return
     except Exception as e:
-        print(f"❌ Error initializing vector DB: {e}")
+        print(f"[ERROR] Error initializing vector DB: {e}")
         return
 
     # Clear existing data if force reload
     if force_reload:
-        print("🔄 Force reload enabled - clearing existing data...")
+        print(" Force reload enabled - clearing existing data...")
         try:
             rag_db.clear_db()
         except Exception as e:
-            print(f"⚠️  Could not clear DB: {e}")
+            print(f"[WARN]  Could not clear DB: {e}")
 
     # Add documents to vector store
-    print("5️⃣  Loading documents into vector database...")
+    print("5  Loading documents into vector database...")
     try:
         rag_db.add_documents(google_data)
     except Exception as e:
-        print(f"❌ Error adding documents: {e}")
+        print(f"[ERROR] Error adding documents: {e}")
         return
 
     # Display statistics
-    print("\n6️⃣  Database Statistics:")
+    print("\n6  Database Statistics:")
     try:
         stats = rag_db.get_db_stats()
         for key, value in stats.items():
             print(f"   {key}: {value}")
     except Exception as e:
-        print(f"⚠️  Could not get stats: {e}")
+        print(f"[WARN]  Could not get stats: {e}")
 
-    print("\n✅ RAG data loading complete!\n")
+    print("\n[OK] RAG data loading complete!\n")
 
 
 def main():

@@ -150,9 +150,39 @@ class RAGVectorDB:
             return "\n".join(context)
         return None
 
-    def get_patient_info(self, patient_name: str) -> Optional[str]:
-        """Get patient information."""
-        context = self.retrieve_by_type(f"patient {patient_name}", "patient_data", top_k=3)
+    def get_patient_info(self, patient_identifier: str) -> Optional[str]:
+        """Get patient information by name or ID.
+
+        For IDs: gets all patient data and searches within it (exact match).
+        For names: uses semantic search.
+        """
+        if not patient_identifier:
+            return None
+
+        patient_id_lower = patient_identifier.lower().strip()
+
+        # If it looks like a patient ID (starts with P), do exact matching
+        if patient_id_lower.startswith('p'):
+            try:
+                # Get ALL patient data and search for exact ID within it
+                all_results = self.vector_store.similarity_search("patient data", k=200)
+                matching_records = []
+
+                for doc in all_results:
+                    content = doc.page_content.lower()
+                    if patient_id_lower in content:
+                        # Split by newlines to get individual records
+                        for line in doc.page_content.split('\n'):
+                            if patient_id_lower in line.lower():
+                                matching_records.append(line)
+
+                if matching_records:
+                    return "\n".join(matching_records)
+            except Exception as e:
+                print(f"[WARN] Error searching by patient ID: {e}")
+
+        # Fallback to semantic search by name
+        context = self.retrieve_by_type(f"patient {patient_identifier}", "patient_data", top_k=3)
         if context:
             return "\n".join(context)
         return None
