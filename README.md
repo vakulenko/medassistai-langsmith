@@ -1,6 +1,30 @@
 # MedAssistAI Chatbot - Doctor Appointment Booking System
 
-A conversational AI chatbot built with **Streamlit**, **LangGraph**, and **Google Gemini** that helps patients book doctor appointments. All conversations are traced and monitored using **LangSmith**.
+A conversational AI chatbot built with **Streamlit**, **LangGraph**, and **Google Gemini** that helps patients book doctor appointments. Built with **LangSmith Studio** integration for real-time debugging and monitoring.
+
+## Quick Start
+
+### Debug with LangSmith Studio
+
+Start the development server with full debugging capabilities:
+
+```bash
+python debug.py
+# or on Windows:
+debug.bat
+```
+
+Then open **https://smith.langchain.com** to test your agent in real-time.
+
+### Run the Chatbot UI
+
+Start the Streamlit interface:
+
+```bash
+streamlit run app.py
+```
+
+Opens at **http://localhost:8501**
 
 ## Features
 
@@ -11,13 +35,18 @@ A conversational AI chatbot built with **Streamlit**, **LangGraph**, and **Googl
 - 👤 Patient information collection
 - ✅ Appointment confirmation
 - 📝 Trello integration for appointment management
-- 🔍 LangSmith tracing for all conversations
 
 ✨ **Session Management**
 - 📋 Create multiple independent chat sessions
 - 🔄 Switch between sessions instantly
-- 🗑️ Delete sessions (with safety—cannot delete the last session)
-- 💾 Each session maintains its own conversation history and context
+- 🗑️ Delete sessions
+- 💾 Each session maintains its own context
+
+✨ **LangSmith Integration**
+- 🔍 Real-time tracing with LangSmith Studio
+- 📊 Monitor intent detection, info extraction, response generation
+- 🐛 Debug LLM calls and agent execution
+- 🔥 Hot-reload support for development
 
 ## Architecture
 
@@ -55,45 +84,47 @@ pip install -r requirements.txt
 
 ### 2. Configure Environment Variables
 
-Create a `.env` file (or verify your existing one contains):
+Create a `.env` file with required API keys:
 
 ```env
 # Google Gemini API
-GOOGLE_API_KEY=your_google_api_key
+GOOGLE_API_KEY=your_api_key
 
-# LangSmith
-LANGSMITH_API_KEY=your_langsmith_api_key
+# LangSmith (for tracing and studio)
+LANGSMITH_API_KEY=your_api_key
 LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com
-LANGSMITH_TRACING=true
 
-# Trello (for appointment storage)
-TRELLO_API_KEY=your_trello_api_key
-TRELLO_API_TOKEN=your_trello_token
+# Trello (optional - for appointment storage)
+TRELLO_API_KEY=your_key
+TRELLO_API_TOKEN=your_token
 TRELLO_BOARD_APPOINTMENTS=board_id
 
-# Doctor Profiles (Google Drive links)
+# Doctor Profiles (optional - Google Drive links)
 GOOGLE_DRIVE_LINK_DR_WILLI_BEDNA=link
 GOOGLE_DRIVE_LINK_DR_TERRY_KLOCK=link
 GOOGLE_DRIVE_LINK_DR_JACKI_SENGE=link
 GOOGLE_DRIVE_LINK_DR_DALLA_MCDER=link
-
-# Patient Data
-GOOGLE_DRIVE_LINK_PATIENT_DATA=link
 ```
 
-### 3. Run the Application
+### 3. Run with LangSmith Studio (Recommended for Development)
 
-**Windows:**
 ```bash
-start.bat
+python debug.py
 ```
 
-**Linux/macOS:**
+This starts the development server with LangSmith Studio integration at http://127.0.0.1:2024
+
+Then open https://smith.langchain.com to test your agent in real-time.
+
+### 4. Run the Streamlit Chatbot
+
+In a separate terminal:
+
 ```bash
 streamlit run app.py
 ```
 
-The chatbot will be available at `http://localhost:8501`
+Opens at http://localhost:8501
 
 ## Project Structure
 
@@ -152,32 +183,33 @@ Bot: [Retrieves and displays appointment information]
 2. Click "🗑️ Delete Current Session" button
 3. (The button is disabled if it's the last remaining session)
 
-## LangSmith Integration
+## LangSmith Studio Integration
 
-All conversations are automatically traced in LangSmith for:
-- **Debugging**: View the exact LLM calls, prompts, and responses
-- **Monitoring**: Track conversation metrics and performance
-- **Quality Assurance**: Review conversations for improvement
+The chatbot uses **LangSmith Studio** for real-time debugging and monitoring.
 
-### Debugging with LangSmith Studio
+### Development: Debug Mode
 
-**In the App:**
-1. Click the "🚀 Open LangSmith Studio" button in the sidebar
-2. View real-time traces of agent execution
-3. Inspect individual steps: intent detection, info extraction, response generation
+For development and debugging, use debug mode which connects directly to LangSmith Studio:
 
-**Key Features:**
-- **Session Tracking**: Each session ID is logged for easy filtering
-- **Intent Detection**: See what intent was detected for each user message
-- **Error Logging**: Failed requests are logged with error details
-- **Full Trace History**: View complete chain of LLM calls and their results
+```bash
+python debug.py
+```
 
-### Access LangSmith Dashboard
-1. Click the "🚀 Open LangSmith Studio" button in the sidebar OR
-2. Go to https://smith.langchain.com
-3. Navigate to the "medassistai-chatbot" project
-4. Filter by session ID to view conversation traces
-5. Click on a trace to inspect detailed execution steps
+Then open https://smith.langchain.com to:
+- Test your agent in real-time
+- Watch LLM calls and responses
+- Monitor intent detection and info extraction
+- See hot-reloading as you edit code
+- Debug agent execution step-by-step
+
+### Production: Conversation Traces
+
+All conversations are automatically traced in LangSmith Cloud:
+- Every user message is logged with context
+- Intent detection results are captured
+- LLM calls and responses are recorded
+- Session-based filtering for easy analysis
+- Full execution traces for debugging
 
 ## Workflow Details
 
@@ -234,14 +266,13 @@ python -m pytest tests/
 3. Test thoroughly with LangSmith monitoring
 4. Submit a pull request
 
-## Recent Changes
+## Key Updates
 
-- **Session Management**: Added ability to create, switch, and delete chat sessions with independent contexts
-- Updated LLM model from Gemini 1.5 Pro to Gemini 3.6 Flash for improved performance and cost efficiency
-- Fixed response parsing to handle Gemini's response format (dict with 'text' key)
-- Simplified UI: removed sidebar sections (Available Doctors, How It Works)
-- Made conversation interface full-width for better UX
-- Added `start.bat` script for easy Windows application launch
+- **LangSmith Studio Integration**: Full debugging support with `debug.py` script
+- **Session Management**: Multiple independent chat sessions with isolated contexts
+- **LangGraph-based Agent**: Built with official LangChain patterns for maintainability
+- **Hot-reload Support**: Edit code and changes appear instantly in Studio
+- **Official Setup**: Follows LangChain's recommended LangGraph CLI approach
 
 ## Future Enhancements
 

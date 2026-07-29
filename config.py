@@ -10,7 +10,8 @@ GEMINI_MODEL = "gemini-3.6-flash"
 # LangSmith Configuration
 LANGSMITH_API_KEY = os.getenv("LANGSMITH_API_KEY")
 LANGSMITH_TRACING = os.getenv("LANGSMITH_TRACING", "true").lower() == "true"
-LANGSMITH_ENDPOINT = os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
+# Note: LangSmith Cloud endpoint - local server not required
+LANGSMITH_ENDPOINT = os.getenv("LANGSMITH_ENDPOINT", "https://eu.api.smith.langchain.com")
 LANGSMITH_PROJECT = "medassistai-chatbot"
 
 # Trello Configuration
