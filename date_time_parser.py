@@ -51,12 +51,21 @@ def parse_date_time(user_input: str) -> dict:
         # Try to extract JSON from the response
         # LLM might wrap JSON in markdown or add extra text
         import re
-        json_match = re.search(r'\{[^}]*\}', content, re.DOTALL)
-        if json_match:
-            content = json_match.group(0)
+        json_content = content
+
+        # First try to extract from markdown code blocks
+        if "```" in content:
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
+            if json_match:
+                json_content = json_match.group(1)
+        else:
+            # Otherwise look for any JSON object
+            json_match = re.search(r'\{[^}]*\}', content, re.DOTALL)
+            if json_match:
+                json_content = json_match.group(0)
 
         # Parse JSON response
-        parsed = json.loads(content)
+        parsed = json.loads(json_content)
 
         # Validate and clean the response
         result = {

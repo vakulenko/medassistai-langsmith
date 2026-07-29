@@ -33,20 +33,20 @@ def main():
     print("Checking requirements...")
 
     if not Path(".env").exists():
-        print("✗ ERROR: .env file not found")
+        print("[ERROR] .env file not found")
         print("Please create .env with your API keys")
         sys.exit(1)
 
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        print("✗ ERROR: GOOGLE_API_KEY not set in .env")
+        print("[ERROR] GOOGLE_API_KEY not set in .env")
         sys.exit(1)
 
-    print("✓ .env configured")
-    print("✓ GOOGLE_API_KEY set")
+    print("[OK] .env configured")
+    print("[OK] GOOGLE_API_KEY set")
 
     if not Path("app.py").exists():
-        print("✗ ERROR: app.py not found")
+        print("[ERROR] app.py not found")
         sys.exit(1)
 
     print("✓ app.py found")

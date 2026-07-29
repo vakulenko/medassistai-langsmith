@@ -70,7 +70,15 @@ def extract_info(state):
     extracted_info = dict(state.extracted_info) if state.extracted_info else {}
 
     try:
-        new_info = json.loads(content)
+        # Extract JSON from markdown code blocks if needed
+        json_content = content
+        if "```" in content:
+            # Extract JSON from markdown code block
+            json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', content, re.DOTALL)
+            if json_match:
+                json_content = json_match.group(1)
+
+        new_info = json.loads(json_content)
         # Merge new info with existing (new info takes precedence)
         extracted_info.update(new_info)
 
