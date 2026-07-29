@@ -34,39 +34,72 @@ Opens at **http://localhost:8501**
 - **Conversational Booking** - Intent detection, multi-turn confirmation, and natural language understanding
 - **Multiple Doctors** - Support for multiple doctor profiles with specializations
 - **Session Management** - Create, switch, and delete independent chat sessions
-- **Appointment Tracking** - Automatic Trello card creation for confirmed bookings
-- **New Patient Registration** - Automatic Trello ticket for adding new patients NOT in database
-- **Fraud Detection** - Honeypot alerts for deceased patients and suspicious patterns
+- **Smart Trello Integration** - Automatic card creation based on patient status:
+  - Existing patients: Appointment card
+  - New patients: Appointment + registration ticket
+  - Deceased patients: Fraud alert (honeypot)
+- **New Patient Registration** - Automatic Trello ticket for adding new patients to database
+- **Fraud Detection** - Honeypot alerts for deceased patients (shows success but creates fraud ticket)
 
 ## How It Works
+
+### Standard Booking Flow
 
 1. User describes appointment needs in natural language
 2. Bot extracts patient info, preferred doctor, date, and time
 3. Bot confirms all details with user (multi-turn confirmation)
 4. User approves appointment
-5. Trello card automatically created with appointment details
+5. Trello card(s) automatically created based on patient status
 
-### Example Conversation - Existing Patient
+### Three Scenarios
+
+#### Scenario 1: Existing Patient
 
 **User:** "I need ophthalmologist tomorrow. Patient ID: P002. Name: Sergii Vakulenko. Email: test@test.com. At 12:34 PM"
 
-**Bot:** [Summarizes appointment details and asks for confirmation]
+**Bot:** [Confirms patient found, summarizes appointment details]
 
 **User:** "Approve"
 
-**Bot:** [Confirms booking, Trello appointment card created]
+**Bot:** [Booking confirmed]
 
-### Example Conversation - New Patient
+**Trello:** Creates **1 card**
+- Appointment card on Appointments board
 
-**User:** "I need ophthalmologist tomorrow. Patient ID: P999 (NEW). Name: John Smith. Email: john.smith@test.com. At 2:30 PM"
+---
 
-**Bot:** [Detects patient NOT in database, asks for confirmation]
+#### Scenario 2: New Patient (Not in Database)
+
+**User:** "I need ophthalmologist tomorrow. Patient ID: P999. Name: John Smith. Email: john.smith@test.com. At 2:30 PM"
+
+**Bot:** [Detects patient not in system, asks for confirmation]
 
 **User:** "Yes, approve"
 
-**Bot:** [Confirms booking, creates TWO Trello cards:
-  - Appointment card for the booking
-  - "Add Patient" ticket for patient registry team]
+**Bot:** [Booking confirmed, patient will be registered]
+
+**Trello:** Creates **2 cards**
+- Appointment card on Appointments board
+- "Add Patient" ticket on Tickets board (for admin to register new patient)
+
+---
+
+#### Scenario 3: Deceased Patient (Fraud Detection)
+
+**User:** "I need appointment. Patient ID: P008. Name: Test Person. Email: test@test.com. At 2:00 PM"
+
+**Bot:** [Asks for confirmation (honeypot flow)]
+
+**User:** "Yes, approve"
+
+**Bot:** [Shows success message]
+
+**Trello:** Creates **1 card**
+- Fraud alert ticket on Tickets board (honeypot - no appointment created)
+
+**Note:** Deceased patients trigger fraud detection. The system shows a success message to the user (honeypot) but creates a fraud ticket for admin review instead of an actual appointment.
+
+See [FRAUD_vs_NEW_PATIENT.md](FRAUD_vs_NEW_PATIENT.md) for technical details.
 
 ## Project Structure
 
@@ -118,6 +151,26 @@ GOOGLE_DRIVE_LINK_PATIENT_DATA=https://drive.google.com/file/d/.../view
 - **Tracing**: LangSmith Studio
 - **Data Integration**: Trello API
 - **Vector DB**: Chroma with Google Gemini embeddings
+
+## Testing
+
+### Test Scenarios
+
+**Test new patient booking (creates appointment + registration ticket):**
+```bash
+python test_new_patient_booking.py
+```
+Use Patient ID: **P999** (not in database)
+
+**Test fraud detection vs new patient logic:**
+```bash
+python test_fraud_vs_new_patient.py
+```
+Verifies:
+- Deceased patients create fraud ticket only
+- New patients create appointment + registration ticket
+
+See [FRAUD_vs_NEW_PATIENT.md](FRAUD_vs_NEW_PATIENT.md) for implementation details.
 
 ## Troubleshooting
 
