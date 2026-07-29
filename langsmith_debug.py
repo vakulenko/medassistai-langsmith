@@ -3,11 +3,16 @@ from langsmith import Client
 from config import LANGSMITH_API_KEY, LANGSMITH_ENDPOINT, LANGSMITH_PROJECT
 from datetime import datetime
 
+def _get_client():
+    """Initialize and return LangSmith client."""
+    # Set environment variables first
+    os.environ["LANGSMITH_API_KEY"] = LANGSMITH_API_KEY
+    os.environ["LANGSMITH_ENDPOINT"] = LANGSMITH_ENDPOINT
+    # Client reads from environment variables
+    return Client()
+
 # Initialize LangSmith client for debugging and tracing
-client = Client(
-    api_key=LANGSMITH_API_KEY,
-    endpoint=LANGSMITH_ENDPOINT,
-)
+client = _get_client()
 
 def initialize_langsmith_tracing():
     """Initialize LangSmith tracing with project configuration."""
