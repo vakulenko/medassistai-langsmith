@@ -49,13 +49,21 @@ def extract_info(state):
     if state.detected_intent == Intent.BOOK_APPOINTMENT:
         state.use_rag_context = True
 
-        # Check specialization availability
+        # Initialize RAG DB for specialization checking
+        rag_db = None
+        try:
+            from rag_vector_db import initialize_rag_db
+            rag_db = initialize_rag_db()
+        except Exception as e:
+            pass
+
+        # Check specialization availability using RAG data
         specialization = extracted_info.get("specialization")
         doctor_name = extracted_info.get("doctor_name")
 
-        if specialization:
+        if specialization and rag_db:
             state.requested_specialization = specialization
-            has_available, doctors = check_specialization_available(specialization)
+            has_available, doctors = check_specialization_available(specialization, rag_db)
             state.has_available_doctor = has_available
             if has_available and doctors:
                 # Suggest the first available doctor

@@ -1,45 +1,90 @@
-"""Patient validation against clinic data."""
+"""Patient validation against clinic data from RAG."""
 from typing import Dict, Optional, Tuple
+from config import DOCTOR_PROFILES
 
 
-# Doctor specializations in our clinic
-CLINIC_DOCTORS = {
-    "Dr. Willi Bedna": ["spine surgery", "back pain", "orthopedics"],
-    "Dr. Terry Klock": ["cardiology", "heart disease", "cardiovascular"],
-    "Dr. Jacki Senge": ["general practice", "internal medicine", "checkup"],
-    "Dr. Dalla McDer": ["pediatrics", "children", "child health"],
-}
+def extract_doctor_specializations_from_rag(rag_db) -> Dict[str, list]:
+    """Extract doctor specializations from RAG data.
 
-# Specialization to doctor mapping (reverse lookup)
-SPECIALIZATION_TO_DOCTORS = {}
-for doctor, specs in CLINIC_DOCTORS.items():
-    for spec in specs:
-        if spec not in SPECIALIZATION_TO_DOCTORS:
-            SPECIALIZATION_TO_DOCTORS[spec] = []
-        SPECIALIZATION_TO_DOCTORS[spec].append(doctor)
+    Reads doctor profiles from RAG and extracts specializations mentioned.
+    """
+    if not rag_db:
+        return {}
+
+    specializations = {}
+
+    for doctor_name in DOCTOR_PROFILES.keys():
+        # Get doctor info from RAG
+        doctor_info = rag_db.get_doctor_info(doctor_name)
+        if not doctor_info:
+            continue
+
+        info_lower = doctor_info.lower()
+
+        # Extract specializations from the doctor's profile
+        # Look for keywords that indicate specialization
+        potential_specs = [
+            "ophthalmology", "ophthalmologist", "eye", "vision", "sight",
+            "cardiology", "cardiologist", "heart", "cardiovascular",
+            "orthopedics", "orthopedic", "spine", "bone", "joint",
+            "pediatrics", "pediatrician", "children", "child",
+            "general practice", "general practitioner", "gp",
+            "internal medicine", "internist",
+            "dermatology", "dermatologist", "skin",
+            "psychiatry", "psychiatrist", "mental",
+            "neurology", "neurologist", "brain", "nerve",
+            "surgery", "surgeon", "surgical",
+        ]
+
+        doc_specs = []
+        for spec in potential_specs:
+            if spec in info_lower:
+                doc_specs.append(spec)
+
+        if doc_specs:
+            specializations[doctor_name] = doc_specs
+
+    return specializations
 
 
-def check_specialization_available(specialization: str) -> Tuple[bool, Optional[list]]:
-    """Check if requested specialization is available in clinic.
+def check_specialization_available(specialization: str, rag_db=None) -> Tuple[bool, Optional[list]]:
+    """Check if requested specialization is available in clinic using RAG data.
 
     Returns:
         (is_available, list_of_doctors) or (False, None)
     """
+    if not rag_db:
+        return False, None
+
     spec_lower = specialization.lower().strip()
 
-    # Check for exact or partial match
-    for spec, doctors in SPECIALIZATION_TO_DOCTORS.items():
-        if spec_lower in spec or spec in spec_lower:
-            return True, doctors
+    # Get specializations from RAG data
+    doctor_specs = extract_doctor_specializations_from_rag(rag_db)
+
+    available_doctors = []
+    for doctor_name, specs in doctor_specs.items():
+        for spec in specs:
+            if spec_lower in spec or spec in spec_lower:
+                available_doctors.append(doctor_name)
+                break
+
+    if available_doctors:
+        return True, available_doctors
 
     return False, None
 
 
-def get_doctor_specializations(doctor_name: str) -> Optional[list]:
-    """Get specializations for a doctor."""
-    for doc, specs in CLINIC_DOCTORS.items():
+def get_doctor_specializations(doctor_name: str, rag_db=None) -> Optional[list]:
+    """Get specializations for a doctor from RAG data."""
+    if not rag_db:
+        return None
+
+    doctor_specs = extract_doctor_specializations_from_rag(rag_db)
+
+    for doc, specs in doctor_specs.items():
         if doctor_name.lower() in doc.lower() or doc.lower() in doctor_name.lower():
             return specs
+
     return None
 
 
@@ -71,5 +116,5 @@ def validate_patient_id(patient_id: str, patient_data: str) -> Tuple[bool, bool]
 
 
 def get_available_doctors_list() -> list:
-    """Get list of all doctors in clinic."""
-    return list(CLINIC_DOCTORS.keys())
+    """Get list of all doctors in clinic from config."""
+    return list(DOCTOR_PROFILES.keys())
