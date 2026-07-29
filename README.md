@@ -35,8 +35,8 @@ Opens at **http://localhost:8501**
 - **Multiple Doctors** - Support for multiple doctor profiles with specializations
 - **Session Management** - Create, switch, and delete independent chat sessions
 - **Appointment Tracking** - Automatic Trello card creation for confirmed bookings
+- **New Patient Registration** - Automatic Trello ticket for adding new patients NOT in database
 - **Fraud Detection** - Honeypot alerts for deceased patients and suspicious patterns
-- **Patient Registration** - Automatic patient add request for new patients
 
 ## How It Works
 
@@ -46,7 +46,7 @@ Opens at **http://localhost:8501**
 4. User approves appointment
 5. Trello card automatically created with appointment details
 
-### Example Conversation
+### Example Conversation - Existing Patient
 
 **User:** "I need ophthalmologist tomorrow. Patient ID: P002. Name: Sergii Vakulenko. Email: test@test.com. At 12:34 PM"
 
@@ -54,7 +54,19 @@ Opens at **http://localhost:8501**
 
 **User:** "Approve"
 
-**Bot:** [Confirms booking, Trello card created automatically]
+**Bot:** [Confirms booking, Trello appointment card created]
+
+### Example Conversation - New Patient
+
+**User:** "I need ophthalmologist tomorrow. Patient ID: P999 (NEW). Name: John Smith. Email: john.smith@test.com. At 2:30 PM"
+
+**Bot:** [Detects patient NOT in database, asks for confirmation]
+
+**User:** "Yes, approve"
+
+**Bot:** [Confirms booking, creates TWO Trello cards:
+  - Appointment card for the booking
+  - "Add Patient" ticket for patient registry team]
 
 ## Project Structure
 
