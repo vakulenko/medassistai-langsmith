@@ -101,6 +101,7 @@ def create_appointment_on_trello(state: ChatState):
     print(f"[TRELLO] Date: {extracted.get('appointment_date', 'Unknown')}")
     print(f"[TRELLO] Time: {extracted.get('appointment_time', 'Unknown')}")
     print(f"[TRELLO] Patient ID: {state.patient_id}")
+    print(f"[TRELLO] Patient Not Found: {state.patient_not_found}")
     print(f"[TRELLO] Extracted Info Keys: {list(extracted.keys())}")
     print(f"{'='*80}\n")
 
@@ -115,17 +116,20 @@ def create_appointment_on_trello(state: ChatState):
             patient_email=extracted.get("patient_email"),
             patient_id=state.patient_id
         )
-        print(f"[TRELLO] Card creation result: {success}\n")
+        print(f"[TRELLO] Appointment card creation result: {success}\n")
 
         # If patient not found in system, create add-patient card as well
         if state.patient_not_found:
-            print(f"[TRELLO] Creating add-patient card for {extracted.get('patient_name', 'Unknown')}")
-            create_add_patient_card(
+            print(f"[TRELLO] Patient not found - Creating add-patient (registration) card for {extracted.get('patient_name', 'Unknown')}")
+            success_patient_card = create_add_patient_card(
                 patient_name=extracted.get("patient_name", "Unknown"),
                 patient_email=extracted.get("patient_email"),
                 patient_id=state.patient_id,
                 notes=f"New patient booking: {extracted.get('reason', 'General')}"
             )
+            print(f"[TRELLO] Add-patient card creation result: {success_patient_card}\n")
+        else:
+            print(f"[TRELLO] Patient found in system - not creating add-patient card\n")
 
         state.booking_confirmed = True
         print(f"[TRELLO] Booking confirmed for {extracted.get('patient_name', 'Unknown')}")
@@ -152,12 +156,18 @@ def check_fraud_and_alert(state: ChatState):
     fraud_detected = False
     fraud_reason = ""
 
+    print(f"\n[FRAUD CHECK] Checking for fraud patterns")
+    print(f"[FRAUD CHECK] Patient name: '{extracted.get('patient_name', 'Unknown')}'")
+    print(f"[FRAUD CHECK] Patient name length: {len(extracted.get('patient_name', ''))}")
+
     # Check for suspicious patterns (but not deceased - that's handled later)
     if extracted.get("patient_name") and len(extracted.get("patient_name", "")) < 3:
         fraud_detected = True
         fraud_reason = "Suspiciously short patient name"
+        print(f"[FRAUD CHECK] ⚠️ FRAUD DETECTED: {fraud_reason}")
 
     if fraud_detected:
+        print(f"[FRAUD CHECK] Creating fraud card for {extracted.get('patient_name', 'Unknown')}")
         create_fraud_card(
             patient_name=extracted.get("patient_name", "Unknown"),
             fraud_type="Data validation",
@@ -165,6 +175,8 @@ def check_fraud_and_alert(state: ChatState):
             session_id=extracted.get("session_id", "unknown"),
             patient_email=extracted.get("patient_email")
         )
+    else:
+        print(f"[FRAUD CHECK] No fraud detected")
 
     return state
 

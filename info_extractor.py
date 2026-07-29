@@ -81,7 +81,10 @@ def extract_info(state):
 
         new_info = json.loads(json_content)
         # Merge new info with existing (new info takes precedence)
-        extracted_info.update(new_info)
+        # But don't overwrite with null values - preserve existing data
+        for key, value in new_info.items():
+            if value is not None:
+                extracted_info[key] = value
 
         # Parse natural language dates/times to strict format with silent failures
         date_time_result = parse_date_time(state.user_input)
@@ -176,6 +179,7 @@ def extract_info(state):
 
         # Validate patient ID if provided (only validate if not already validated)
         if state.patient_id and not state.patient_not_found and not state.is_deceased_patient:
+            print(f"\n[PATIENT LOOKUP] Validating patient ID: {state.patient_id}")
             try:
                 from rag_vector_db import initialize_rag_db
                 rag_db = initialize_rag_db()
@@ -183,19 +187,24 @@ def extract_info(state):
                 patient_data = rag_db.get_patient_info(state.patient_id)
 
                 if patient_data:
+                    print(f"[PATIENT LOOKUP] Found patient data, validating...")
                     patient_exists, is_deceased = validate_patient_id(state.patient_id, patient_data)
                     if not patient_exists:
                         # Patient ID not found in data
+                        print(f"[PATIENT LOOKUP] Patient ID {state.patient_id} not found in system")
                         state.patient_not_found = True
                         state.should_add_patient = True
                     if is_deceased:
+                        print(f"[PATIENT LOOKUP] Patient ID {state.patient_id} is marked deceased")
                         state.is_deceased_patient = True
                 else:
                     # No patient data returned = patient not in system
+                    print(f"[PATIENT LOOKUP] No patient data found for {state.patient_id} - patient not in system")
                     state.patient_not_found = True
                     state.should_add_patient = True
             except Exception as e:
                 # If lookup fails, assume patient not in system
+                print(f"[PATIENT LOOKUP] ERROR: {e} - assuming patient not in system")
                 state.patient_not_found = True
                 state.should_add_patient = True
 
