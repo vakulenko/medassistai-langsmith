@@ -165,14 +165,31 @@ def generate_response(state):
         # Determine patient status
         patient_status = "New (not in system)" if state.patient_not_found else "Existing patient"
 
+        # Ensure dates are in proper format for display
+        appointment_date = extracted.get("appointment_date", "Not specified")
+        appointment_time = extracted.get("appointment_time", "Not specified")
+
+        # If still showing natural language, try to parse
+        if appointment_date and appointment_date.lower() in ["tomorrow", "not specified"]:
+            from date_time_parser import parse_date_time
+            parsed = parse_date_time(state.user_input)
+            if parsed.get("appointment_date"):
+                appointment_date = parsed["appointment_date"]
+
+        if appointment_time and (":" not in appointment_time or appointment_time.lower() in ["not specified"]):
+            from date_time_parser import parse_date_time
+            parsed = parse_date_time(state.user_input)
+            if parsed.get("appointment_time"):
+                appointment_time = parsed["appointment_time"]
+
         response = llm.invoke(prompt.format_prompt(
             patient_id=state.patient_id or "Not provided",
             patient_name=extracted.get("patient_name", "Not provided"),
             patient_email=extracted.get("patient_email", "Not provided"),
             patient_status=patient_status,
             doctor_name=extracted.get("doctor_name", "Not specified"),
-            appointment_date=extracted.get("appointment_date", "Not specified"),
-            appointment_time=extracted.get("appointment_time", "Not specified"),
+            appointment_date=appointment_date,
+            appointment_time=appointment_time,
             appointment_reason=extracted.get("reason", "Not specified"),
             specialization=state.requested_specialization or "Not specified",
             has_doctor="Yes" if state.has_available_doctor else "No",
