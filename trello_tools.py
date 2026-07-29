@@ -55,8 +55,8 @@ def create_appointment_card(
     Args:
         patient_name: Patient's full name
         doctor_name: Doctor's name
-        appointment_date: Appointment date
-        appointment_time: Appointment time
+        appointment_date: Appointment date (YYYY-MM-DD format)
+        appointment_time: Appointment time (HH:MM format)
         reason: Reason for appointment
         patient_email: Patient's email (optional)
         patient_id: Patient's ID (optional)
@@ -65,6 +65,13 @@ def create_appointment_card(
         True if card created successfully, False otherwise
     """
     try:
+        print(f"[DEBUG] create_appointment_card called with:")
+        print(f"        patient_name: {patient_name}")
+        print(f"        doctor_name: {doctor_name}")
+        print(f"        appointment_date: {appointment_date}")
+        print(f"        appointment_time: {appointment_time}")
+        print(f"        patient_id: {patient_id}")
+
         # Check if Trello credentials are configured
         if not TRELLO_BOARD_APPOINTMENTS:
             print("[ERROR] TRELLO_BOARD_APPOINTMENTS not configured in .env")
@@ -75,6 +82,8 @@ def create_appointment_card(
             print(f"[ERROR] Could not find 'In Queue' list on board {TRELLO_BOARD_APPOINTMENTS}")
             print(f"   Check: board exists, 'In Queue' list exists, credentials are correct")
             return False
+
+        print(f"[DEBUG] Found list ID: {list_id}")
 
         # Build card description
         description = f"""Patient ID: {patient_id or 'Not provided'}
@@ -97,10 +106,14 @@ Reason: {reason}"""
             "desc": description
         }
 
+        print(f"[DEBUG] POSTing card to Trello...")
         response = requests.post(url, params=params)
+        print(f"[DEBUG] Response status: {response.status_code}")
+
         response.raise_for_status()
 
         print(f"[SUCCESS] Created appointment card for {patient_name} with Dr. {doctor_name}")
+        print(f"          Date: {appointment_date}, Time: {appointment_time}")
         return True
 
     except Exception as e:

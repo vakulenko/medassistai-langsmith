@@ -76,14 +76,43 @@ def extract_info(state):
 
         # Parse natural language dates/times to strict format
         # ALWAYS parse, and ALWAYS update if we get a valid result
-        # (the LLM might extract "Tomorrow" or "12:34 PM" instead of actual dates)
         date_time_result = parse_date_time(state.user_input)
+
+        # Update if we got a parsed date
         if date_time_result.get("appointment_date"):
-            # Update if we got a parsed date (could be overwriting "Tomorrow")
             extracted_info["appointment_date"] = date_time_result["appointment_date"]
+        # Fallback: if we have "tomorrow" in input and no date, parse it directly
+        elif "tomorrow" in state.user_input.lower() and not extracted_info.get("appointment_date"):
+            from datetime import datetime, timedelta
+            tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+            extracted_info["appointment_date"] = tomorrow
+            print(f"[DEBUG] Fallback parsed 'tomorrow' to {tomorrow}")
+
+        # Update if we got a parsed time
         if date_time_result.get("appointment_time"):
-            # Update if we got a parsed time (could be overwriting "12:34 PM")
             extracted_info["appointment_time"] = date_time_result["appointment_time"]
+        # Fallback: extract time pattern like "12:34 PM" or "12:34"
+        elif not extracted_info.get("appointment_time"):
+            import re
+            time_pattern = re.search(r'(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?', state.user_input)
+            if time_pattern:
+                hour = int(time_pattern.group(1))
+                minute = time_pattern.group(2)
+                period = time_pattern.group(3)
+
+                # Convert to 24-hour format if AM/PM provided
+                if period and period.upper() == "PM" and hour != 12:
+                    hour += 12
+                elif period and period.upper() == "AM" and hour == 12:
+                    hour = 0
+
+                extracted_info["appointment_time"] = f"{hour:02d}:{minute}"
+                print(f"[DEBUG] Fallback parsed time to {extracted_info['appointment_time']}")
+
+        # Log the final extracted date/time
+        print(f"[DEBUG] Final extracted_info date/time:")
+        print(f"        appointment_date: {extracted_info.get('appointment_date', 'NOT SET')}")
+        print(f"        appointment_time: {extracted_info.get('appointment_time', 'NOT SET')}")
 
         # Fallback: Extract patient name from input if LLM didn't get it
         if not extracted_info.get("patient_name"):
