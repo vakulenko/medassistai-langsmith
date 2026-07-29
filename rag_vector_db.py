@@ -37,6 +37,7 @@ class RAGVectorDB:
     def __init__(self, persist_dir: str = ".vector_db"):
         """Initialize RAG vector database."""
         self.persist_dir = persist_dir
+        self._needs_reload = False
 
         # Try embedding models in order of preference
         # Based on: python CHECK_GEMINI_MODELS.py
@@ -75,6 +76,18 @@ class RAGVectorDB:
                 collection_name="medassistai"
             )
             print(f"[OK] Loaded existing vector database from {self.persist_dir}")
+
+            # Check if database has patient data - if not, it's stale and needs reload
+            try:
+                stats = self.get_db_stats()
+                document_count = stats.get("total_documents", 0)
+                if document_count == 0:
+                    print("[WARN] Vector database is empty - will reload on next use")
+                    self._needs_reload = True
+                else:
+                    self._needs_reload = False
+            except Exception:
+                self._needs_reload = False
         else:
             self.vector_store = Chroma(
                 persist_directory=self.persist_dir,
@@ -82,6 +95,7 @@ class RAGVectorDB:
                 collection_name="medassistai"
             )
             print(f"[OK] Created new vector database at {self.persist_dir}")
+            self._needs_reload = False
 
     def add_documents(self, documents: Dict[str, str], chunk_size: int = 1000, chunk_overlap: int = 200):
         """Add documents to vector store."""
@@ -206,6 +220,7 @@ class RAGVectorDB:
             collection = self.vector_store._collection
             count = collection.count()
             return {
+                "total_documents": count,
                 "total_chunks": count,
                 "persist_dir": self.persist_dir
             }

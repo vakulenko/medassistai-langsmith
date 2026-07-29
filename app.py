@@ -19,6 +19,21 @@ def load_rag_data():
     """Load RAG data on app startup."""
     try:
         rag_db = initialize_rag_db()
+
+        # Check if we need to reload data from Google Drive
+        # (important for Streamlit Cloud deployment where cached DB might be stale)
+        try:
+            stats = rag_db.get_db_stats()
+            document_count = stats.get("total_documents", 0)
+
+            if document_count == 0:
+                print("[RAG] Vector database is empty - reloading from Google Drive...")
+                from load_rag_data import load_rag_data as load_rag_data_func
+                load_rag_data_func(force_reload=False)
+                rag_db = initialize_rag_db()  # Re-initialize to get fresh data
+        except Exception as e:
+            print(f"[RAG] Could not check database stats: {e}")
+
         return True
     except Exception as e:
         print(f"Warning: Could not initialize RAG database: {e}")
