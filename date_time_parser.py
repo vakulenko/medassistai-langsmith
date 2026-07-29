@@ -48,6 +48,13 @@ def parse_date_time(user_input: str) -> dict:
 
         content = _extract_text(response)
 
+        # Try to extract JSON from the response
+        # LLM might wrap JSON in markdown or add extra text
+        import re
+        json_match = re.search(r'\{[^}]*\}', content, re.DOTALL)
+        if json_match:
+            content = json_match.group(0)
+
         # Parse JSON response
         parsed = json.loads(content)
 
@@ -64,7 +71,7 @@ def parse_date_time(user_input: str) -> dict:
                 datetime.strptime(date_str, "%Y-%m-%d")
                 result["appointment_date"] = date_str
             except ValueError:
-                print(f"[WARN] Invalid date format: {date_str}")
+                pass
 
         if parsed.get("appointment_time"):
             time_str = parsed["appointment_time"]
@@ -73,15 +80,13 @@ def parse_date_time(user_input: str) -> dict:
                 datetime.strptime(time_str, "%H:%M")
                 result["appointment_time"] = time_str
             except ValueError:
-                print(f"[WARN] Invalid time format: {time_str}")
+                pass
 
         return result
 
     except json.JSONDecodeError as e:
-        print(f"[ERROR] Error parsing date/time JSON: {e}")
         return {"appointment_date": None, "appointment_time": None}
     except Exception as e:
-        print(f"[ERROR] Error parsing date/time: {e}")
         return {"appointment_date": None, "appointment_time": None}
 
 
