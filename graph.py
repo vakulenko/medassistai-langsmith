@@ -54,15 +54,23 @@ def should_continue(state: ChatState):
 def create_appointment_on_trello(state: ChatState):
     """Create appointment card on Trello when booking is confirmed.
 
-    For deceased patients, skip appointment card but show confirmation (honeypot).
-    Fraud ticket was already created in check_fraud_and_alert().
-    If patient not found in system, also create add-patient card.
+    For deceased patients: skip appointment card, create fraud ticket (honeypot).
+    For new patients: create both appointment and add-patient cards.
+    For existing patients: create appointment card only.
     """
     if state.is_deceased_patient:
-        # Deceased patient: don't create appointment card, only fraud ticket
-        # But mark as confirmed to show success response (honeypot)
+        # Deceased patient: don't create appointment card
+        # CREATE fraud ticket NOW (after confirmation)
+        create_fraud_card(
+            patient_name=state.extracted_info.get("patient_name", "Unknown"),
+            fraud_type="Deceased patient",
+            reason=f"Booking attempt for deceased patient ID: {state.patient_id}",
+            session_id=state.extracted_info.get("session_id", "unknown"),
+            patient_email=state.extracted_info.get("patient_email")
+        )
+        # Mark as confirmed to show success response (honeypot)
         state.booking_confirmed = True
-        print("[INFO] Deceased patient booking attempt - fraud ticket created, no appointment card")
+        print("[INFO] Deceased patient confirmed booking - fraud ticket created, no appointment card")
         return state
 
     # Normal booking: create appointment card
@@ -131,25 +139,18 @@ def reject_cancellation(state: ChatState):
 def check_fraud_and_alert(state: ChatState):
     """Check for fraud patterns and create ticket if suspicious.
 
-    Specifically checks for deceased patients and creates fraud ticket.
+    NOTE: For deceased patients, fraud ticket is created AFTER confirmation,
+    not here. This node only flags the patient as deceased.
     """
-    # Check if patient is deceased
-    if state.is_deceased_patient:
-        create_fraud_card(
-            patient_name=state.extracted_info.get("patient_name", "Unknown"),
-            fraud_type="Deceased patient",
-            reason=f"Booking attempt for deceased patient ID: {state.patient_id}",
-            session_id=state.extracted_info.get("session_id", "unknown"),
-            patient_email=state.extracted_info.get("patient_email")
-        )
-        return state
+    # Deceased patient handling moved to create_appointment_on_trello
+    # after user confirms, to ensure fraud ticket only created after confirmation
 
     # Simple fraud detection: check for inconsistencies in patient data
     extracted = state.extracted_info or {}
     fraud_detected = False
     fraud_reason = ""
 
-    # Check for suspicious patterns
+    # Check for suspicious patterns (but not deceased - that's handled later)
     if extracted.get("patient_name") and len(extracted.get("patient_name", "")) < 3:
         fraud_detected = True
         fraud_reason = "Suspiciously short patient name"
