@@ -120,13 +120,13 @@ def process_cancellation(state: ChatState):
         print("[INFO] Deceased patient cancellation request - ignoring (not in system)")
         return state
 
-    # For normal patients, create cancellation card
+    # For normal patients, delete the appointment card and create cancellation record
     cancel_appointment_card(
         patient_name=state.extracted_info.get("patient_name", "Unknown"),
         patient_id=state.patient_id
     )
 
-    state.last_response = "Your appointment cancellation request has been recorded. A confirmation will be sent to you shortly."
+    state.last_response = "Your appointment has been successfully cancelled. A confirmation email will be sent to you shortly. If you need to schedule a new appointment, please let us know."
     return state
 
 

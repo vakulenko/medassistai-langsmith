@@ -228,19 +228,16 @@ Request Type: Add to Patient List"""
         return False
 
 
-def cancel_appointment_card(
-    patient_name: str,
-    patient_id: Optional[str] = None
-) -> bool:
+def delete_appointment_card(patient_name: str, patient_id: Optional[str] = None) -> bool:
     """
-    Create a card to track appointment cancellation request.
+    Delete/archive the appointment card for a patient.
 
     Args:
         patient_name: Patient's full name
         patient_id: Patient's ID (optional)
 
     Returns:
-        True if card created successfully, False otherwise
+        True if card deleted successfully, False otherwise
     """
     try:
         list_id = get_list_id(TRELLO_BOARD_APPOINTMENTS, "In Queue")
@@ -248,31 +245,100 @@ def cancel_appointment_card(
             print(f"[ERROR] Could not find 'In Queue' list on Appointments board")
             return False
 
+        # Get all cards in the list
+        url = f"https://api.trello.com/1/lists/{list_id}/cards"
+        params = {
+            "key": TRELLO_API_KEY,
+            "token": TRELLO_API_TOKEN
+        }
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+
+        cards = response.json()
+
+        # Find the appointment card matching patient name and/or ID
+        card_found = False
+        for card in cards:
+            card_name = card.get("name", "").lower()
+            card_desc = card.get("desc", "").lower()
+
+            # Match by patient name or ID
+            if (patient_name.lower() in card_name or
+                patient_name.lower() in card_desc or
+                (patient_id and patient_id.lower() in card_desc)):
+                # Delete this card (actually archive it)
+                delete_url = f"https://api.trello.com/1/cards/{card['id']}"
+                delete_params = {
+                    "key": TRELLO_API_KEY,
+                    "token": TRELLO_API_TOKEN,
+                    "closed": "true"  # Archive instead of delete
+                }
+                delete_response = requests.put(delete_url, params=delete_params)
+                delete_response.raise_for_status()
+                print(f"[SUCCESS] Deleted appointment card for {patient_name}")
+                card_found = True
+                break
+
+        if not card_found:
+            print(f"[WARN] No appointment card found for {patient_name}")
+            return False
+
+        return True
+
+    except Exception as e:
+        print(f"[ERROR] Error deleting appointment card: {str(e)}")
+        return False
+
+
+def cancel_appointment_card(
+    patient_name: str,
+    patient_id: Optional[str] = None
+) -> bool:
+    """
+    Delete the appointment card and create a cancellation record card.
+
+    Args:
+        patient_name: Patient's full name
+        patient_id: Patient's ID (optional)
+
+    Returns:
+        True if cancellation processed successfully, False otherwise
+    """
+    try:
+        # First, delete the original appointment card
+        delete_appointment_card(patient_name, patient_id)
+
+        # Then create a cancellation record card
+        list_id = get_list_id(TRELLO_BOARD_APPOINTMENTS, "In Queue")
+        if not list_id:
+            print(f"[ERROR] Could not find 'In Queue' list on Appointments board")
+            return False
+
         # Build card description
         description = f"""Patient Name: {patient_name}
-Request Type: Cancellation"""
+Request Type: Appointment Cancelled"""
 
         if patient_id:
             description += f"\nPatient ID: {patient_id}"
 
-        # Create card
+        # Create cancellation record card
         url = "https://api.trello.com/1/cards"
         params = {
             "key": TRELLO_API_KEY,
             "token": TRELLO_API_TOKEN,
             "idList": list_id,
-            "name": f"[CANCEL] {patient_name}",
+            "name": f"[CANCELLED] {patient_name}",
             "desc": description
         }
 
         response = requests.post(url, params=params)
         response.raise_for_status()
 
-        print(f"[SUCCESS] Created cancellation card for {patient_name}")
+        print(f"[SUCCESS] Created cancellation record for {patient_name}")
         return True
 
     except Exception as e:
-        print(f"[ERROR] Error creating cancellation card: {str(e)}")
+        print(f"[ERROR] Error processing cancellation: {str(e)}")
         return False
 
 
