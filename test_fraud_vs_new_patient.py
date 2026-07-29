@@ -167,5 +167,5 @@ print("  - Appointment card with booking details")
 print("  - Registration ticket for admin to add patient to DB")
 print("  - User sees appointment confirmation\n")
 
-print("[✓] Logic is correctly separated and working as intended!")
+print("[OK] Logic is correctly separated and working as intended!")
 print("=" * 80)
