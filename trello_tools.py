@@ -91,7 +91,7 @@ Reason: {reason}"""
         response = requests.post(url, params=params)
         response.raise_for_status()
 
-        print(f"✓ Created appointment card for {patient_name}")
+        print(f"Created appointment card for {patient_name}")
         return True
 
     except Exception as e:
@@ -149,7 +149,7 @@ Session ID: {session_id}"""
         response = requests.post(url, params=params)
         response.raise_for_status()
 
-        print(f"⚠️ Created fraud card for {patient_name}")
+        print(f"Created fraud card for {patient_name}")
         return True
 
     except Exception as e:
