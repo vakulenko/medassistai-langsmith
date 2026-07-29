@@ -13,6 +13,12 @@ A conversational AI chatbot built with **Streamlit**, **LangGraph**, and **Googl
 - 📝 Trello integration for appointment management
 - 🔍 LangSmith tracing for all conversations
 
+✨ **Session Management**
+- 📋 Create multiple independent chat sessions
+- 🔄 Switch between sessions instantly
+- 🗑️ Delete sessions (with safety—cannot delete the last session)
+- 💾 Each session maintains its own conversation history and context
+
 ## Architecture
 
 ```
@@ -129,6 +135,23 @@ User: "When is my appointment?"
 Bot: [Retrieves and displays appointment information]
 ```
 
+### Using Session Management
+
+**Create a New Session:**
+1. In the sidebar, enter a session name (e.g., "Dr. Appointment 1")
+2. Click the "➕ New" button
+3. A fresh session is created with empty conversation history
+
+**Switch Between Sessions:**
+1. Use the "Switch session" dropdown in the sidebar
+2. Sessions show their name and creation time
+3. Switching instantly loads that session's conversation history
+
+**Delete a Session:**
+1. Navigate to the session you want to delete
+2. Click "🗑️ Delete Current Session" button
+3. (The button is disabled if it's the last remaining session)
+
 ## LangSmith Integration
 
 All conversations are automatically traced in LangSmith for:
@@ -198,6 +221,7 @@ python -m pytest tests/
 
 ## Recent Changes
 
+- **Session Management**: Added ability to create, switch, and delete chat sessions with independent contexts
 - Updated LLM model from Gemini 1.5 Pro to Gemini 3.6 Flash for improved performance and cost efficiency
 - Fixed response parsing to handle Gemini's response format (dict with 'text' key)
 - Simplified UI: removed sidebar sections (Available Doctors, How It Works)

@@ -15,19 +15,25 @@ This is a conversational AI chatbot for doctor appointment booking, built with S
 - Prioritize fixing bugs and implementing requested features
 - Test changes in the running application before reporting completion
 - Use the existing architectural patterns established in the codebase
+- **This is an educational example application.** Do not overcomplicate design. Keep code simple, readable, and understandable for learning purposes.
 
 ### Testing
 - For UI changes: start the dev server and manually test in browser
 - Check for regressions in core functionality (chatbot responses, message history)
 - Verify LangSmith tracing is working
 
+### Documentation Rules
+- **Maximum 400 lines per .md file.** If a file exceeds 400 lines, move content to a new .md file and link it from the original.
+- **Avoid duplication.** Do not repeat information across multiple .md files. Link to the source document instead.
+- Keep documentation clear and concise for educational clarity.
+
 ## Project Structure
 
 ```
 medassistai-langsmith/
-├── app.py                    # Main Streamlit UI
+├── app.py                    # Main Streamlit UI with session management
 ├── graph.py                  # LangGraph workflow
-├── state.py                  # Chat state models
+├── state.py                  # Chat state models, Session class, SessionManager
 ├── config.py                 # Configuration (models, API keys)
 ├── llm_setup.py             # LLM initialization
 ├── intent_detector.py       # Intent detection module
@@ -55,8 +61,14 @@ The LLM returns responses as dicts with structure: `{'type': 'text', 'text': '..
 
 ### UI Layout
 - Conversation takes full-width display
-- Sidebar is minimal (only LangSmith info)
+- Sidebar contains session management controls (create, switch, delete)
 - Chat messages displayed via Streamlit's `chat_message()` component
+
+### Session Management
+- Sessions stored in `st.session_state.sessions` (dict keyed by session ID)
+- Active session tracked in `st.session_state.active_session_id`
+- Each session has: `chat_history`, `conversation_history`, `name`, `session_id`, `created_at`
+- UI allows creating named sessions, switching between them, and deleting (safe delete—cannot delete last session)
 
 ## Development Commands
 
