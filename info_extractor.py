@@ -39,6 +39,7 @@ User message: {user_input}
 Conversation context: {conversation_context}
 
 Extract the following information if present (return as JSON):
+- patient_id: Patient ID (like P001, P002, etc.)
 - patient_name: Patient's full name
 - patient_email: Patient's email address
 - doctor_name: Preferred doctor's name
@@ -128,6 +129,11 @@ def extract_info(state):
                     break
 
         state.extracted_info = extracted_info
+
+        # Extract patient ID from the extracted info if not already set
+        if not state.patient_id and extracted_info.get("patient_id"):
+            state.patient_id = extracted_info["patient_id"]
+
     except json.JSONDecodeError:
         # Keep existing extracted_info on JSON parse error
         pass
