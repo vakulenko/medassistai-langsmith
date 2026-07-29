@@ -13,30 +13,31 @@ A conversational AI chatbot for booking doctor appointments, built with **Stream
 
 2. **Create `.env` with API keys:**
    ```env
-   GOOGLE_API_KEY=your_key
+   GOOGLE_API_KEY=your_gemini_api_key
    LANGSMITH_API_KEY=your_key
-   LANGSMITH_ENDPOINT=https://eu.api.smith.langchain.com
    ```
+
+3. **Setup RAG (optional):**
+   ```bash
+   python load_rag_data.py
+   ```
+   See [RAG_SETUP.md](RAG_SETUP.md) for configuration.
 
 ### Run Chatbot
 
 ```bash
 chatbot.bat
-# or: python chatbot.py
 ```
 
 Opens at **http://localhost:8501**
 
-### Debug with LangSmith Studio (Development)
+### Debug Mode
 
 ```bash
 debug.bat
-# or: python debug.py
 ```
 
-Opens development server at **http://127.0.0.1:2024**
-
-Then visit **https://smith.langchain.com** to test and debug your agent in real-time.
+Opens development server for real-time debugging with LangSmith Studio.
 
 ## Features
 
@@ -45,17 +46,24 @@ Then visit **https://smith.langchain.com** to test and debug your agent in real-
 - 📋 **Session Management** - Create, switch, and delete independent chat sessions
 - 🔍 **LangSmith Integration** - Real-time tracing, monitoring, and debugging
 - 📝 **Appointment Tracking** - Store bookings in Trello (optional)
-- 🔥 **Hot-Reload** - Edit code and see changes instantly in Studio
+- 📚 **RAG Context** - Google Drive integration for context-aware responses
 
 ## Architecture
 
 ```
+Google Drive
+    ↓
+Google Drive MCP (google_drive_mcp.py)
+    ↓ Downloads doctor profiles & patient data
+RAG Vector DB (rag_vector_db.py)
+    ↓ Semantic search with Chroma
+    ↓
 Streamlit UI (app.py)
     ↓
 LangGraph Agent (graph.py)
 ├── Intent Detection
 ├── Information Extraction
-├── Response Generation
+├── Response Generation (injected with RAG context)
 └── Appointment Confirmation
     ↓
 LangSmith Tracing
@@ -67,19 +75,26 @@ Trello Integration (optional)
 
 ```
 medassistai-langsmith/
-├── debug.py / debug.bat           # Start with LangSmith Studio
-├── chatbot.py / chatbot.bat       # Start regular chatbot
-├── app.py                         # Streamlit UI
-├── graph.py                       # LangGraph agent
-├── state.py                       # State models & session management
-├── config.py                      # Configuration
-├── llm_setup.py                   # LLM initialization
-├── intent_detector.py             # Intent detection
-├── info_extractor.py              # Information extraction
-├── response_generator.py          # Response generation
-├── langsmith_debug.py             # LangSmith utilities
-├── langgraph.json                 # LangGraph config
-└── requirements.txt               # Dependencies
+├── debug.py / debug.bat              # Start with LangSmith Studio
+├── chatbot.py / chatbot.bat          # Start regular chatbot
+├── app.py                            # Streamlit UI
+├── graph.py                          # LangGraph agent
+├── state.py                          # State models & session management
+├── config.py                         # Configuration
+├── llm_setup.py                      # LLM initialization
+├── intent_detector.py                # Intent detection
+├── info_extractor.py                 # Information extraction
+├── response_generator.py             # Response generation
+├── langsmith_debug.py                # LangSmith utilities
+├── google_drive_mcp.py               # Google Drive integration
+├── rag_vector_db.py                  # Vector database & RAG
+├── load_rag_data.py                  # Load Google Drive data into vector DB
+├── setup_google_drive.py             # Google Drive authentication setup
+├── test_rag.py                       # RAG system tests
+├── RAG_SETUP.md                      # Detailed RAG setup guide
+├── langgraph.json                    # LangGraph config
+├── requirements.txt                  # Dependencies
+└── .vector_db/                       # Chroma vector database (auto-created)
 ```
 
 ## Development
@@ -116,19 +131,29 @@ Each session maintains its own conversation history and context.
 
 ## Configuration
 
-Optional features in `.env`:
+### RAG with Google Drive
+
+Configure in `.env`:
 
 ```env
-# Trello integration (optional)
+GOOGLE_API_KEY=your_key
+
+# Google Drive shared links
+GOOGLE_DRIVE_LINK_DR_WILLI_BEDNA=https://drive.google.com/file/d/.../view
+GOOGLE_DRIVE_LINK_DR_TERRY_KLOCK=https://drive.google.com/file/d/.../view
+GOOGLE_DRIVE_LINK_DR_JACKI_SENGE=https://drive.google.com/file/d/.../view
+GOOGLE_DRIVE_LINK_DR_DALLA_MCDER=https://drive.google.com/file/d/.../view
+GOOGLE_DRIVE_LINK_PATIENT_DATA=https://drive.google.com/file/d/.../view
+```
+
+See [RAG_SETUP.md](RAG_SETUP.md) for details.
+
+### Optional Trello Integration
+
+```env
 TRELLO_API_KEY=your_key
 TRELLO_API_TOKEN=your_token
 TRELLO_BOARD_APPOINTMENTS=board_id
-
-# Doctor profiles (optional)
-GOOGLE_DRIVE_LINK_DR_WILLI_BEDNA=link
-GOOGLE_DRIVE_LINK_DR_TERRY_KLOCK=link
-GOOGLE_DRIVE_LINK_DR_JACKI_SENGE=link
-GOOGLE_DRIVE_LINK_DR_DALLA_MCDER=link
 ```
 
 ## Tech Stack
@@ -137,7 +162,9 @@ GOOGLE_DRIVE_LINK_DR_DALLA_MCDER=link
 - **LLM**: Google Gemini 3.6 Flash
 - **Orchestration**: LangGraph
 - **Tracing**: LangSmith Studio
-- **Integration**: Trello API, Google Drive
+- **RAG**: Chroma vector database with Google Gemini embeddings
+- **Data Source**: Google Drive with PDF/DOCX/PPTX support
+- **Integration**: Trello API, Google Drive MCP
 
 ## Troubleshooting
 

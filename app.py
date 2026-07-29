@@ -5,12 +5,26 @@ from graph import graph
 from state import ChatState, Intent, SessionManager, Session
 from config import DOCTOR_PROFILES
 from langsmith_debug import initialize_langsmith_tracing, get_langsmith_project_url, log_agent_run
+from rag_vector_db import initialize_rag_db
 
 # Load environment variables
 load_dotenv()
 
 # Configure LangSmith for tracing
 initialize_langsmith_tracing()
+
+# Initialize RAG vector database
+@st.cache_resource
+def load_rag_data():
+    """Load RAG data on app startup."""
+    try:
+        rag_db = initialize_rag_db()
+        return True
+    except Exception as e:
+        print(f"Warning: Could not initialize RAG database: {e}")
+        return False
+
+rag_available = load_rag_data()
 
 # Streamlit configuration
 st.set_page_config(
@@ -76,6 +90,21 @@ with st.sidebar:
             del st.session_state.sessions[st.session_state.active_session_id]
             st.session_state.active_session_id = list(st.session_state.sessions.keys())[0]
             st.rerun()
+
+    st.divider()
+
+    st.markdown("### 📚 RAG System")
+    if rag_available:
+        st.caption("✅ Vector database loaded - using doctor & patient context")
+        try:
+            rag_db = initialize_rag_db()
+            stats = rag_db.get_db_stats()
+            if stats:
+                st.caption(f"Chunks indexed: {stats.get('total_chunks', 0)}")
+        except:
+            pass
+    else:
+        st.caption("⚠️ Vector database not available")
 
     st.divider()
 

@@ -1,0 +1,63 @@
+# Environment variables
+.env
+.env.local
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Google credentials (DO NOT COMMIT)
+credentials.json
+token.json
+google-credentials.json
+
+# LangSmith
+.langsmith/
+
+# Streamlit
+.streamlit/
+*.streamlit.cache/
+
+# OS
+.DS_Store
+Thumbs.db
+*.bak
+
+# Project specific
+*.db
+*.sqlite
+.ipynb_checkpoints/
+
+# Note: .vector_db/ IS included in repository
+# It contains pre-loaded embeddings for quick startup
