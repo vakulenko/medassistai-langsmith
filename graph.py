@@ -1,84 +1,67 @@
 from langgraph.graph import StateGraph, END
 from state import ChatState, Intent
-from intent_detector import detect_intent
-from info_extractor import extract_info
-from response_generator import generate_response
 from langsmith import traceable
+from agents import (
+    IntentDetectionAgent,
+    ExtractionAgent,
+    PatientValidationAgent,
+    FraudDetectionAgent,
+    ResponseGenerationAgent,
+    ConfirmationValidationAgent
+)
 from trello_tools import create_appointment_card, create_fraud_card, create_add_patient_card
 
-def set_confirmation_flags(state: ChatState):
-    """Set confirmation flags based on state."""
-    # Check for pending confirmations
-    if state.appointment_ready_for_confirmation:
-        return state
 
-    if state.detected_intent == Intent.BOOK_APPOINTMENT:
-        # If deceased patient detected, ask for confirmation (but will create fraud ticket)
-        if state.is_deceased_patient:
-            state.appointment_ready_for_confirmation = True
-
-        # Check if all required info is present (including Patient ID)
-        required_fields = ["patient_name", "patient_email", "doctor_name", "appointment_date", "appointment_time"]
-        missing_fields = [f for f in required_fields if not state.extracted_info.get(f)]
-
-        # If patient not found AND we have patient name + email + doctor, go to confirmation
-        if state.patient_not_found:
-            if state.extracted_info.get("patient_name") and state.extracted_info.get("patient_email"):
-                state.appointment_ready_for_confirmation = True
-        elif state.patient_id and not missing_fields:
-            # All info present - ask for explicit confirmation
-            state.appointment_ready_for_confirmation = True
+# Initialize agents
+intent_agent = IntentDetectionAgent()
+extraction_agent = ExtractionAgent()
+validation_agent = PatientValidationAgent()
+fraud_agent = FraudDetectionAgent()
+response_agent = ResponseGenerationAgent()
+confirmation_agent = ConfirmationValidationAgent()
 
 
-    return state
+# Node functions
+@traceable(name="intent_detection_node", run_type="chain")
+def intent_detection_node(state: ChatState) -> ChatState:
+    """Detect user intent."""
+    return intent_agent.execute(state)
 
 
-@traceable(name="should_continue", run_type="chain")
-def should_continue(state: ChatState):
-    """Determine routing based on state."""
-    # CRITICAL: Check for pending confirmations even if intent is UNKNOWN
-    # This handles Message 2 responses like "Approve" which get UNKNOWN intent
-    if state.appointment_ready_for_confirmation:
-        return "ask_for_confirmation"
+@traceable(name="extraction_node", run_type="chain")
+def extraction_node(state: ChatState) -> ChatState:
+    """Extract appointment information."""
+    return extraction_agent.execute(state)
 
 
-    if state.detected_intent == Intent.BOOK_APPOINTMENT:
-        # Check if specialization is not available (we cannot help)
-        if state.requested_specialization and not state.has_available_doctor:
-            return END
-
-        # Check if all required info is present (including Patient ID)
-        required_fields = ["patient_name", "patient_email", "doctor_name", "appointment_date", "appointment_time"]
-        missing_fields = [f for f in required_fields if not state.extracted_info.get(f)]
-
-        # Patient ID is also required
-        if not state.patient_id:
-            return "ask_for_info"
-
-        # If patient not found AND we have patient name + email + doctor, go to confirmation
-        if state.patient_not_found:
-            if state.extracted_info.get("patient_name") and state.extracted_info.get("patient_email"):
-                return "ask_for_confirmation"
-            return "ask_for_info"
-
-        if not missing_fields:
-            # All info present - ask for explicit confirmation
-            return "ask_for_confirmation"
-        return "ask_for_info"
-
-    return END
+@traceable(name="fraud_detection_node", run_type="chain")
+def fraud_detection_node(state: ChatState) -> ChatState:
+    """Check for fraudulent patterns."""
+    return fraud_agent.execute(state)
 
 
-def create_appointment_on_trello(state: ChatState):
-    """Create appointment card on Trello when booking is confirmed.
+@traceable(name="patient_validation_node", run_type="chain")
+def patient_validation_node(state: ChatState) -> ChatState:
+    """Validate patient data and check availability."""
+    return validation_agent.execute(state)
 
-    For deceased patients: skip appointment card, create fraud ticket (honeypot).
-    For new patients: create both appointment and add-patient cards.
-    For existing patients: create appointment card only.
-    """
+
+@traceable(name="response_generation_node", run_type="chain")
+def response_generation_node(state: ChatState) -> ChatState:
+    """Generate response based on state."""
+    return response_agent.execute(state)
+
+
+@traceable(name="confirmation_validation_node", run_type="chain")
+def confirmation_validation_node(state: ChatState) -> ChatState:
+    """Validate user confirmation response."""
+    return confirmation_agent.execute(state)
+
+
+@traceable(name="appointment_creation_node", run_type="chain")
+def appointment_creation_node(state: ChatState) -> ChatState:
+    """Create appointment on Trello."""
     if state.is_deceased_patient:
-        # Deceased patient: don't create appointment card
-        # CREATE fraud ticket NOW (after confirmation)
         create_fraud_card(
             patient_name=state.extracted_info.get("patient_name", "Unknown"),
             fraud_type="Deceased patient",
@@ -86,27 +69,12 @@ def create_appointment_on_trello(state: ChatState):
             session_id=state.extracted_info.get("session_id", "unknown"),
             patient_email=state.extracted_info.get("patient_email")
         )
-        # Mark as confirmed to show success response (honeypot)
         state.booking_confirmed = True
-        print("[INFO] Deceased patient confirmed booking - fraud ticket created, no appointment card")
         return state
 
-    # Normal booking: create appointment card
     extracted = state.extracted_info or {}
 
-    print(f"\n{'='*80}")
-    print(f"[TRELLO] Attempting to create appointment card")
-    print(f"[TRELLO] Patient Name: {extracted.get('patient_name', 'Unknown')}")
-    print(f"[TRELLO] Doctor Name: {extracted.get('doctor_name', 'Unknown')}")
-    print(f"[TRELLO] Date: {extracted.get('appointment_date', 'Unknown')}")
-    print(f"[TRELLO] Time: {extracted.get('appointment_time', 'Unknown')}")
-    print(f"[TRELLO] Patient ID: {state.patient_id}")
-    print(f"[TRELLO] Patient Not Found: {state.patient_not_found}")
-    print(f"[TRELLO] Extracted Info Keys: {list(extracted.keys())}")
-    print(f"{'='*80}\n")
-
-    if extracted or state.patient_id:  # Check if we have SOME data
-        print(f"[TRELLO] Creating card...")
+    if extracted or state.patient_id:
         success = create_appointment_card(
             patient_name=extracted.get("patient_name", "Unknown"),
             doctor_name=extracted.get("doctor_name", "Unknown"),
@@ -116,138 +84,162 @@ def create_appointment_on_trello(state: ChatState):
             patient_email=extracted.get("patient_email"),
             patient_id=state.patient_id
         )
-        print(f"[TRELLO] Appointment card creation result: {success}\n")
 
-        # If patient not found in system, create add-patient card as well
         if state.patient_not_found:
-            print(f"[TRELLO] Patient not found - Creating add-patient (registration) card for {extracted.get('patient_name', 'Unknown')}")
             success_patient_card = create_add_patient_card(
                 patient_name=extracted.get("patient_name", "Unknown"),
                 patient_email=extracted.get("patient_email"),
                 patient_id=state.patient_id,
                 notes=f"New patient booking: {extracted.get('reason', 'General')}"
             )
-            print(f"[TRELLO] Add-patient card creation result: {success_patient_card}\n")
-        else:
-            print(f"[TRELLO] Patient found in system - not creating add-patient card\n")
 
         state.booking_confirmed = True
-        print(f"[TRELLO] Booking confirmed for {extracted.get('patient_name', 'Unknown')}")
-    else:
-        print(f"[TRELLO] ERROR: No extracted info available for card creation")
-        print(f"[TRELLO] extracted={extracted}, patient_id={state.patient_id}\n")
 
     return state
 
 
+@traceable(name="set_confirmation_flags", run_type="chain")
+def set_confirmation_flags(state: ChatState) -> ChatState:
+    """Set confirmation flags based on state."""
+    if state.appointment_ready_for_confirmation:
+        return state
 
+    if state.detected_intent == Intent.BOOK_APPOINTMENT:
+        if state.is_deceased_patient:
+            state.appointment_ready_for_confirmation = True
 
-def check_fraud_and_alert(state: ChatState):
-    """Check for fraud patterns and create ticket if suspicious.
+        required_fields = ["patient_name", "patient_email", "doctor_name", "appointment_date", "appointment_time"]
+        missing_fields = [f for f in required_fields if not state.extracted_info.get(f)]
 
-    NOTE: For deceased patients, fraud ticket is created AFTER confirmation,
-    not here. This node only flags the patient as deceased.
-    """
-    # Deceased patient handling moved to create_appointment_on_trello
-    # after user confirms, to ensure fraud ticket only created after confirmation
-
-    # Simple fraud detection: check for inconsistencies in patient data
-    extracted = state.extracted_info or {}
-    fraud_detected = False
-    fraud_reason = ""
-
-    print(f"\n[FRAUD CHECK] Checking for fraud patterns")
-    print(f"[FRAUD CHECK] Patient name: '{extracted.get('patient_name', 'Unknown')}'")
-    print(f"[FRAUD CHECK] Patient name length: {len(extracted.get('patient_name', ''))}")
-
-    # Check for suspicious patterns (but not deceased - that's handled later)
-    if extracted.get("patient_name") and len(extracted.get("patient_name", "")) < 3:
-        fraud_detected = True
-        fraud_reason = "Suspiciously short patient name"
-        print(f"[FRAUD CHECK] ⚠️ FRAUD DETECTED: {fraud_reason}")
-
-    if fraud_detected:
-        print(f"[FRAUD CHECK] Creating fraud card for {extracted.get('patient_name', 'Unknown')}")
-        create_fraud_card(
-            patient_name=extracted.get("patient_name", "Unknown"),
-            fraud_type="Data validation",
-            reason=fraud_reason,
-            session_id=extracted.get("session_id", "unknown"),
-            patient_email=extracted.get("patient_email")
-        )
-    else:
-        print(f"[FRAUD CHECK] No fraud detected")
+        if state.patient_not_found:
+            if state.extracted_info.get("patient_name") and state.extracted_info.get("patient_email"):
+                state.appointment_ready_for_confirmation = True
+        elif state.patient_id and not missing_fields:
+            state.appointment_ready_for_confirmation = True
 
     return state
 
-def handle_confirmation(state: ChatState):
-    """Handle user confirmation of appointment."""
+
+def should_route_to_validation(state: ChatState) -> bool:
+    """Determine if patient validation should run."""
+    return state.detected_intent == Intent.BOOK_APPOINTMENT
+
+
+def should_continue(state: ChatState) -> str:
+    """Determine routing after flag setting."""
+    if state.appointment_ready_for_confirmation:
+        return "ask_for_confirmation"
+
+    if state.detected_intent == Intent.BOOK_APPOINTMENT:
+        if state.requested_specialization and not state.has_available_doctor:
+            return END
+
+        required_fields = ["patient_name", "patient_email", "doctor_name", "appointment_date", "appointment_time"]
+        missing_fields = [f for f in required_fields if not state.extracted_info.get(f)]
+
+        if not state.patient_id:
+            return "ask_for_info"
+
+        if state.patient_not_found:
+            if state.extracted_info.get("patient_name") and state.extracted_info.get("patient_email"):
+                return "ask_for_confirmation"
+            return "ask_for_info"
+
+        if not missing_fields:
+            return "ask_for_confirmation"
+        return "ask_for_info"
+
+    return END
+
+
+def handle_confirmation(state: ChatState) -> str:
+    """Handle confirmation routing."""
     user_input_lower = state.user_input.lower().strip()
 
-    # Check for approval keywords
     if any(keyword in user_input_lower for keyword in ["yes", "approve", "confirm", "agree", "ok", "okay", "go ahead"]):
-        return "create_trello_card"
+        return "create_appointment"
     elif any(keyword in user_input_lower for keyword in ["no", "reject", "cancel", "decline", "stop"]):
         return "reject_booking"
     else:
-        # Unclear response, ask again
         return END
 
 
-def reject_booking(state: ChatState):
+def reject_booking(state: ChatState) -> ChatState:
     """Handle booking rejection."""
     state.last_response = "Booking cancelled. Feel free to contact us if you change your mind."
     return state
 
 
 def build_graph():
-    """Build the LangGraph workflow for appointment booking."""
+    """Build the multi-node LangGraph workflow."""
     workflow = StateGraph(ChatState)
 
-    # Add nodes
-    workflow.add_node("detect_intent", detect_intent)
-    workflow.add_node("extract_info", extract_info)
-    workflow.add_node("generate_response", generate_response)
+    # Add all nodes
+    workflow.add_node("intent_detection", intent_detection_node)
+    workflow.add_node("extraction", extraction_node)
+    workflow.add_node("fraud_detection", fraud_detection_node)
+    workflow.add_node("patient_validation", patient_validation_node)
     workflow.add_node("set_flags", set_confirmation_flags)
+    workflow.add_node("response_generation", response_generation_node)
     workflow.add_node("ask_for_info", lambda state: state)
     workflow.add_node("ask_for_confirmation", lambda state: state)
-    workflow.add_node("confirm_booking", lambda state: {**state.__dict__, "booking_confirmed": True})
-    workflow.add_node("create_trello_card", create_appointment_on_trello)
-    workflow.add_node("check_fraud", check_fraud_and_alert)
+    workflow.add_node("confirmation_validation", confirmation_validation_node)
+    workflow.add_node("create_appointment", appointment_creation_node)
     workflow.add_node("reject_booking", reject_booking)
 
     # Set entry point
-    workflow.set_entry_point("detect_intent")
+    workflow.set_entry_point("intent_detection")
 
     # Add edges
-    workflow.add_edge("detect_intent", "extract_info")
-    workflow.add_edge("extract_info", "check_fraud")
-    workflow.add_edge("check_fraud", "generate_response")
-    workflow.add_edge("generate_response", "set_flags")
+    workflow.add_edge("intent_detection", "extraction")
+    workflow.add_edge("extraction", "fraud_detection")
+
+    # Conditional edge: route to validation only for booking intent
     workflow.add_conditional_edges(
-        "set_flags",
+        "fraud_detection",
+        should_route_to_validation,
+        {
+            True: "patient_validation",
+            False: "set_flags"
+        }
+    )
+
+    workflow.add_edge("patient_validation", "set_flags")
+    workflow.add_edge("set_flags", "response_generation")
+
+    # Conditional edge: route based on confirmation readiness
+    workflow.add_conditional_edges(
+        "response_generation",
         should_continue,
         {
-            "ask_for_info": END,
+            "ask_for_info": "ask_for_info",
             "ask_for_confirmation": "ask_for_confirmation",
             END: END,
         }
     )
+
+    # Handle responses
+    workflow.add_edge("ask_for_info", END)
+    workflow.add_edge("ask_for_confirmation", "confirmation_validation")
+
+    # Confirmation routing
     workflow.add_conditional_edges(
-        "ask_for_confirmation",
+        "confirmation_validation",
         handle_confirmation,
         {
-            "create_trello_card": "create_trello_card",
+            "create_appointment": "create_appointment",
             "reject_booking": "reject_booking",
             END: END,
         }
     )
-    workflow.add_edge("create_trello_card", END)
+
+    workflow.add_edge("create_appointment", END)
     workflow.add_edge("reject_booking", END)
 
     return workflow.compile()
 
+
 graph = build_graph()
 
 if __name__ == "__main__":
-    print("[OK] Graph initialized successfully")
+    print("[OK] Multi-node multi-agent graph initialized successfully")

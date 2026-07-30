@@ -101,26 +101,67 @@ Opens at **http://localhost:8501**
 
 See [FRAUD_vs_NEW_PATIENT.md](FRAUD_vs_NEW_PATIENT.md) for technical details.
 
+## Architecture: Multi-Agent Multi-Node
+
+The chatbot uses a **multi-agent architecture** with each agent running as a separate LangGraph node:
+
+```
+__start__
+  ↓
+intent_detection (IntentDetectionAgent)
+  ↓
+extraction (ExtractionAgent)
+  ↓
+fraud_detection (FraudDetectionAgent)
+  ├→ patient_validation (PatientValidationAgent) [if BOOK_APPOINTMENT]
+  └→ skip [otherwise]
+     ↓
+  set_flags (Determine confirmation readiness)
+     ↓
+response_generation (ResponseGenerationAgent)
+  ├→ ask_for_info → end
+  ├→ ask_for_confirmation → confirmation_validation
+  └→ end
+     ↓
+confirmation_validation (ConfirmationValidationAgent)
+  ├→ create_appointment → end
+  ├→ reject_booking → end
+  └→ end
+```
+
+**Key Points:**
+- 6 agent nodes (each with LLM reasoning)
+- Conditional routing based on intent and state
+- Visible in LangSmith Studio for debugging and monitoring
+- Full execution tracing per node
+
+See [MULTI_AGENT_ARCHITECTURE.md](MULTI_AGENT_ARCHITECTURE.md) and [GRAPH_ARCHITECTURE.md](GRAPH_ARCHITECTURE.md) for detailed documentation.
+
 ## Project Structure
 
 ```
 medassistai-langsmith/
 ├── chatbot.py / chatbot.bat          # Run chatbot
 ├── app.py                            # Streamlit UI
-├── graph.py                          # LangGraph workflow
+├── graph.py                          # Multi-node LangGraph workflow
+├── agents.py                         # 6 agent implementations
+├── agent_orchestrator.py             # Agent orchestration (legacy)
 ├── state.py                          # State models
 ├── config.py                         # Configuration
 ├── llm_setup.py                      # LLM setup
-├── intent_detector.py                # Intent detection
-├── info_extractor.py                 # Information extraction
+├── intent_detector.py                # Intent detection utilities
+├── info_extractor.py                 # Information extraction utilities
 ├── date_time_parser.py               # Date/time parsing
-├── response_generator.py             # Response generation
-├── patient_validator.py              # Patient validation
+├── response_generator.py             # Response generation utilities
+├── patient_validator.py              # Patient validation utilities
 ├── rag_vector_db.py                  # Vector database
 ├── trello_tools.py                   # Trello integration
 ├── langsmith_debug.py                # LangSmith utilities
 ├── load_rag_data.py                  # Load data into vector DB
 ├── requirements.txt                  # Dependencies
+├── MULTI_AGENT_ARCHITECTURE.md       # Agent design documentation
+├── GRAPH_ARCHITECTURE.md             # Node structure documentation
+├── MULTI_AGENT_README.md             # Usage guide
 └── .vector_db/                       # Chroma vector database
 ```
 
@@ -151,6 +192,24 @@ GOOGLE_DRIVE_LINK_PATIENT_DATA=https://drive.google.com/file/d/.../view
 - **Tracing**: LangSmith Studio
 - **Data Integration**: Trello API
 - **Vector DB**: Chroma with Google Gemini embeddings
+
+## Debugging
+
+### View Multi-Agent Graph in LangSmith Studio
+
+```bash
+# Debug with LangSmith tracing
+python debug.py
+```
+
+Then open [LangSmith Studio](https://smith.langchain.com) to see:
+- **Multi-node graph visualization** - All 6 agents visible
+- **Per-node execution** - See each agent's input/output
+- **Conditional routing** - Watch smart routing in action
+- **Full execution trace** - Detailed trace of entire workflow
+- **Agent reasoning** - View LLM prompts and responses
+
+The multi-agent architecture is fully integrated into LangSmith for complete visibility and debugging.
 
 ## Testing
 
