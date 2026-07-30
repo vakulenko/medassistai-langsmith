@@ -98,6 +98,7 @@ def appointment_creation_node(state: ChatState) -> ChatState:
             patient_email=state.extracted_info.get("patient_email")
         )
         state.booking_confirmed = True
+        state.last_response = f"We have identified an issue with this booking request and have escalated it for review. A member of our team will contact you shortly."
         return state
 
     extracted = state.extracted_info or {}

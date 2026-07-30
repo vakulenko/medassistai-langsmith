@@ -186,6 +186,7 @@ if user_input:
         is_deceased_patient=st.session_state.booking_state.get("is_deceased_patient", False),
         patient_not_found=st.session_state.booking_state.get("patient_not_found", False),
         should_add_patient=st.session_state.booking_state.get("should_add_patient", False),
+        last_response=st.session_state.booking_state.get("last_response", ""),
     )
 
     # Process through LangGraph
@@ -246,6 +247,7 @@ if user_input:
                 "is_deceased_patient": result.get("is_deceased_patient", False),
                 "patient_not_found": result.get("patient_not_found", False),
                 "should_add_patient": result.get("should_add_patient", False),
+                "last_response": result.get("last_response", ""),
             }
 
             # DEBUG: Show saved state
