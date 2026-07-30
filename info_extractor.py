@@ -173,11 +173,15 @@ def extract_info(state):
 
         if specialization and rag_db:
             # Only re-check if specialization is new (different from previous)
+            print(f"\n[SPECIALIZATION] Current specialization: {specialization}")
+            print(f"[SPECIALIZATION] Previous specialization: {state.requested_specialization}")
+            print(f"[SPECIALIZATION] Are they different? {specialization != state.requested_specialization}")
+
             if specialization != state.requested_specialization:
                 state.requested_specialization = specialization
                 has_available, doctors = check_specialization_available(specialization, rag_db)
                 state.has_available_doctor = has_available
-                print(f"\n[SPECIALIZATION] Requested: {specialization}")
+                print(f"[SPECIALIZATION] Requested: {specialization}")
                 print(f"[SPECIALIZATION] Available doctors: {doctors}")
                 print(f"[SPECIALIZATION] Current doctor_name: {doctor_name}")
                 if has_available and doctors:
@@ -192,6 +196,9 @@ def extract_info(state):
                 # Use previously detected availability (don't re-check)
                 print(f"[SPECIALIZATION] Using cached availability (same as before: {state.requested_specialization})")
                 pass
+        else:
+            print(f"\n[SPECIALIZATION] No specialization to check")
+            print(f"  specialization={specialization}, rag_db={'yes' if rag_db else 'no'}")
 
         # Validate patient ID if provided (only validate if not already validated)
         if state.patient_id and not state.patient_not_found and not state.is_deceased_patient:
