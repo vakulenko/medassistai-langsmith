@@ -80,6 +80,10 @@ def extract_info(state):
                 json_content = json_match.group(1)
 
         new_info = json.loads(json_content)
+
+        # Debug: log what the LLM extracted
+        print(f"\n[EXTRACTION] LLM returned: {new_info}")
+
         # Merge new info with existing (new info takes precedence)
         # But don't overwrite with null values - preserve existing data
         for key, value in new_info.items():
@@ -168,13 +172,20 @@ def extract_info(state):
                 state.requested_specialization = specialization
                 has_available, doctors = check_specialization_available(specialization, rag_db)
                 state.has_available_doctor = has_available
+                print(f"\n[SPECIALIZATION] Requested: {specialization}")
+                print(f"[SPECIALIZATION] Available doctors: {doctors}")
+                print(f"[SPECIALIZATION] Current doctor_name: {doctor_name}")
                 if has_available and doctors:
                     # Suggest the first available doctor
                     if not doctor_name:
+                        print(f"[SPECIALIZATION] Assigning: {doctors[0]}")
                         extracted_info["doctor_name"] = doctors[0]
                         state.extracted_info = extracted_info
+                    else:
+                        print(f"[SPECIALIZATION] Doctor already set, not overwriting")
             else:
                 # Use previously detected availability (don't re-check)
+                print(f"[SPECIALIZATION] Using cached availability (same as before: {state.requested_specialization})")
                 pass
 
         # Validate patient ID if provided (only validate if not already validated)
