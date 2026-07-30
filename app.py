@@ -81,6 +81,8 @@ with st.sidebar:
                 new_session = SessionManager.create_session(new_session_name.strip())
                 st.session_state.sessions[new_session.session_id] = new_session
                 st.session_state.active_session_id = new_session.session_id
+                # Clear booking state for new session
+                st.session_state.booking_state = {}
                 st.rerun()
             else:
                 st.warning("Enter a session name")
@@ -99,6 +101,8 @@ with st.sidebar:
 
     if selected_session != st.session_state.active_session_id:
         st.session_state.active_session_id = selected_session
+        # Clear booking state when switching sessions to avoid context leakage
+        st.session_state.booking_state = {}
         st.rerun()
 
     # Delete session button
