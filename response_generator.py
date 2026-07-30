@@ -67,6 +67,9 @@ PATIENT_NOT_FOUND_PROMPT = ChatPromptTemplate.from_template("""
 A new patient is trying to book an appointment. They provided:
 - Patient Name: {patient_name}
 - Patient ID: {patient_id}
+- Doctor/Specialization: {doctor_name}
+- Requested Date: {appointment_date}
+- Requested Time: {appointment_time}
 - Reason: {reason}
 
 This patient is NOT in our system yet. We will add them, but first ask for confirmation
@@ -75,8 +78,9 @@ new patient once booking is confirmed.
 
 Generate a professional response that:
 1. Confirms we'll add them as a new patient
-2. Asks if they want to proceed with the booking anyway
-3. Lists what we have for them
+2. Shows the doctor/specialization we found for them
+3. Asks if they want to proceed with the booking
+4. Lists what we have for them
 """)
 
 def generate_response(state):
@@ -101,6 +105,9 @@ def generate_response(state):
             response = llm.invoke(prompt.format_prompt(
                 patient_name=extracted.get("patient_name", "Unknown"),
                 patient_id=state.patient_id or "Not provided",
+                doctor_name=extracted.get("doctor_name", "Not specified"),
+                appointment_date=extracted.get("appointment_date", "Not specified"),
+                appointment_time=extracted.get("appointment_time", "Not specified"),
                 reason=extracted.get("reason", "General checkup")
             ).messages)
             state.last_response = _extract_text(response)
