@@ -35,6 +35,11 @@ def _extract_specialization_from_input(text: str) -> str:
 EXTRACTION_PROMPT = ChatPromptTemplate.from_template("""
 Extract appointment booking information from the user's message.
 
+IMPORTANT:
+- doctor_name should ONLY be extracted if the user explicitly names a specific doctor
+- If user mentions a specialization (like "psychiatry", "eye doctor", etc.) instead of a doctor name, use null for doctor_name
+- specialization should capture the medical specialty requested
+
 User message: {user_input}
 Conversation context: {conversation_context}
 
@@ -42,11 +47,11 @@ Extract the following information if present (return as JSON):
 - patient_id: Patient ID (like P001, P002, etc.)
 - patient_name: Patient's full name
 - patient_email: Patient's email address
-- doctor_name: Preferred doctor's name
+- doctor_name: Preferred doctor's full name (null if only specialization mentioned)
 - appointment_date: Preferred appointment date (YYYY-MM-DD format)
 - appointment_time: Preferred appointment time (HH:MM format)
 - reason: Reason for appointment/chief complaint
-- specialization: Required doctor specialization (if doctor not specified)
+- specialization: Required doctor specialization (like psychiatry, cardiology, ophthalmology, etc.)
 
 For any missing information, use null.
 Return ONLY valid JSON, no additional text.
