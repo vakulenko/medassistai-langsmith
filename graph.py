@@ -83,16 +83,12 @@ def response_generation_node(state: ChatState) -> ChatState:
 @traceable(name="confirmation_validation_node", run_type="chain")
 def confirmation_validation_node(state: ChatState) -> ChatState:
     """Validate user confirmation response."""
-    print(f"[confirmation_validation_node] Processing user input: '{state.user_input}'")
-    result = confirmation_agent.execute(state)
-    print(f"[confirmation_validation_node] booking_confirmed after agent: {result['booking_confirmed']}")
-    return result
+    return confirmation_agent.execute(state)
 
 
 @traceable(name="appointment_creation_node", run_type="chain")
 def appointment_creation_node(state: ChatState) -> ChatState:
     """Create appointment on Trello."""
-    print(f"[appointment_creation_node] Creating appointment - booking_confirmed={state.booking_confirmed}, patient_id={state.patient_id}")
     if state.is_deceased_patient:
         create_fraud_card(
             patient_name=state.extracted_info.get("patient_name", "Unknown"),
@@ -260,18 +256,25 @@ def build_graph():
     )
 
     workflow.add_edge("patient_validation", "set_flags")
+
     # Route directly to confirmation if resuming from interrupt
+    def route_from_set_flags(state: ChatState) -> str:
+        if state.appointment_ready_for_confirmation and state.user_input:
+            confirmation_words = ["yes", "approve", "confirm", "agree", "ok", "go", "no", "reject", "cancel", "decline"]
+            if any(w in state.user_input.lower() for w in confirmation_words):
+                return "confirmation_validation"
+        return "response_generation"
+
     workflow.add_conditional_edges(
         "set_flags",
-        lambda state: "confirmation_validation" if (state.appointment_ready_for_confirmation and state.user_input and any(w in state.user_input.lower() for w in ["yes", "approve", "confirm", "agree", "ok", "go", "no", "reject", "cancel", "decline"])) else "response_generation",
+        route_from_set_flags,
         {
             "confirmation_validation": "confirmation_validation",
             "response_generation": "response_generation",
         }
     )
 
-    # For resume from interrupt: response_generation might skip and return state
-    # We need to ensure should_continue routing is applied regardless
+    # For normal flow: response_generation routes based on confirmation readiness
     # Add conditional edge: route based on confirmation readiness
     workflow.add_conditional_edges(
         "response_generation",
@@ -289,7 +292,6 @@ def build_graph():
     workflow.add_edge("ask_for_confirmation", "confirmation_validation")
 
     # Confirmation routing
-    print("[DEBUG] Adding confirmation_validation conditional edges")
     workflow.add_conditional_edges(
         "confirmation_validation",
         handle_confirmation,
@@ -303,10 +305,10 @@ def build_graph():
     workflow.add_edge("create_appointment", END)
     workflow.add_edge("reject_booking", END)
 
-    # Enable interrupts BEFORE confirmation_validation node
-    # When the graph reaches ask_for_confirmation, it pauses and waits for user input
-    # This saves LLM tokens by not running confirmation_validation until user responds
-    return workflow.compile(interrupt_before=["confirmation_validation"])
+    # DO NOT use interrupt_before here - it causes issues with resuming from interrupt
+    # Instead, the app handles pausing at ask_for_confirmation
+    # When resuming with confirmation input, the graph routes from set_flags directly to confirmation_validation
+    return workflow.compile()
 
 
 graph = build_graph()
