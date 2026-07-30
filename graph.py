@@ -123,6 +123,12 @@ def appointment_creation_node(state: ChatState) -> ChatState:
 
         state.booking_confirmed = True
 
+        # Generate confirmation message for user
+        doctor = extracted.get("doctor_name", "your selected doctor")
+        date = extracted.get("appointment_date", "the scheduled date")
+        time = extracted.get("appointment_time", "the scheduled time")
+        state.last_response = f"Perfect! Your appointment with {doctor} on {date} at {time} has been confirmed. A confirmation email will be sent to {extracted.get('patient_email', 'your email')}."
+
     return state
 
 
