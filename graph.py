@@ -74,7 +74,8 @@ def response_generation_node(state: ChatState) -> ChatState:
     if state.appointment_ready_for_confirmation and state.user_input:
         if any(word in state.user_input.lower() for word in ["yes", "approve", "confirm", "agree", "ok", "go", "no", "reject", "cancel", "decline"]):
             print("[ResponseGenerationAgent] SKIPPED - Confirmation input detected, routing to confirmation validation")
-            return state
+            print(f"[ResponseGenerationAgent] Current last_response: {state.last_response[:50] if state.last_response else 'None'}...")
+            return state  # Return state unchanged - last_response is already set from message 1
 
     return response_agent.execute(state)
 
@@ -259,9 +260,19 @@ def build_graph():
     )
 
     workflow.add_edge("patient_validation", "set_flags")
-    workflow.add_edge("set_flags", "response_generation")
+    # Route directly to confirmation if resuming from interrupt
+    workflow.add_conditional_edges(
+        "set_flags",
+        lambda state: "confirmation_validation" if (state.appointment_ready_for_confirmation and state.user_input and any(w in state.user_input.lower() for w in ["yes", "approve", "confirm", "agree", "ok", "go", "no", "reject", "cancel", "decline"])) else "response_generation",
+        {
+            "confirmation_validation": "confirmation_validation",
+            "response_generation": "response_generation",
+        }
+    )
 
-    # Conditional edge: route based on confirmation readiness
+    # For resume from interrupt: response_generation might skip and return state
+    # We need to ensure should_continue routing is applied regardless
+    # Add conditional edge: route based on confirmation readiness
     workflow.add_conditional_edges(
         "response_generation",
         should_continue,
@@ -278,6 +289,7 @@ def build_graph():
     workflow.add_edge("ask_for_confirmation", "confirmation_validation")
 
     # Confirmation routing
+    print("[DEBUG] Adding confirmation_validation conditional edges")
     workflow.add_conditional_edges(
         "confirmation_validation",
         handle_confirmation,
