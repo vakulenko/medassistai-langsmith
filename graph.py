@@ -24,13 +24,30 @@ confirmation_agent = ConfirmationValidationAgent()
 # Node functions
 @traceable(name="intent_detection_node", run_type="chain")
 def intent_detection_node(state: ChatState) -> ChatState:
-    """Detect user intent."""
+    """Detect user intent.
+
+    Note: If resuming from interrupt (appointment_ready_for_confirmation=True),
+    skip intent detection to preserve the booking context.
+    """
+    # Skip intent detection when resuming from interrupt
+    if state.appointment_ready_for_confirmation and state.detected_intent == Intent.BOOK_APPOINTMENT:
+        print("[IntentDetectionAgent] SKIPPED - Resuming from interrupt")
+        return state
+
     return intent_agent.execute(state)
 
 
 @traceable(name="extraction_node", run_type="chain")
 def extraction_node(state: ChatState) -> ChatState:
-    """Extract appointment information."""
+    """Extract appointment information.
+
+    Note: If resuming from interrupt, skip extraction to preserve existing extracted data.
+    """
+    # Skip extraction when resuming from interrupt
+    if state.appointment_ready_for_confirmation and state.extracted_info:
+        print("[ExtractionAgent] SKIPPED - Using preserved extracted info from previous turn")
+        return state
+
     return extraction_agent.execute(state)
 
 
@@ -192,6 +209,9 @@ def build_graph():
     workflow.add_node("reject_booking", reject_booking)
 
     # Set entry point
+    # When resuming from interrupt, detected_intent will already be set
+    # and appointment_ready_for_confirmation will be true
+    # In that case, we want to skip intent/extraction and go straight to confirmation
     workflow.set_entry_point("intent_detection")
 
     # Add edges
