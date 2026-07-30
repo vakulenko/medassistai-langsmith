@@ -18,7 +18,7 @@ def _extract_specialization_from_input(text: str) -> str:
         "orthopedist", "orthopedics", "spine", "bone",
         "pediatrician", "pediatrics", "children",
         "dermatologist", "dermatology", "skin",
-        "psychiatrist", "psychiatry", "mental",
+        "psychiatrist", "psychiatry", "mental", "therapist", "therapy",
         "neurologist", "neurology", "brain",
         "surgeon", "surgery",
         "internist", "internal medicine", "general practice",

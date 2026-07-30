@@ -31,7 +31,7 @@ def extract_doctor_specializations_from_rag(rag_db) -> Dict[str, list]:
             "general practice", "general practitioner", "gp",
             "internal medicine", "internist",
             "dermatology", "dermatologist", "skin",
-            "psychiatry", "psychiatrist", "mental",
+            "psychiatry", "psychiatrist", "mental", "therapist", "therapy",
             "neurology", "neurologist", "brain", "nerve",
             "surgery", "surgeon", "surgical",
         ]
