@@ -65,7 +65,17 @@ def patient_validation_node(state: ChatState) -> ChatState:
 
 @traceable(name="response_generation_node", run_type="chain")
 def response_generation_node(state: ChatState) -> ChatState:
-    """Generate response based on state."""
+    """Generate response based on state.
+
+    Note: Skip when resuming from interrupt with confirmation input to let
+    confirmation_validation handle the response instead.
+    """
+    # Skip response generation when resuming from interrupt with confirmation
+    if state.appointment_ready_for_confirmation and state.user_input:
+        if any(word in state.user_input.lower() for word in ["yes", "approve", "confirm", "agree", "ok", "go", "no", "reject", "cancel", "decline"]):
+            print("[ResponseGenerationAgent] SKIPPED - Confirmation input detected, routing to confirmation validation")
+            return state
+
     return response_agent.execute(state)
 
 
@@ -149,10 +159,15 @@ def should_continue(state: ChatState) -> str:
     user has provided confirmation input), route directly to confirmation_validation.
     """
     if state.appointment_ready_for_confirmation:
-        # If user input looks like confirmation, go straight to validation
-        # (i.e., resuming from interrupt, user said "Approve", "Yes", etc.)
-        if state.user_input and any(word in state.user_input.lower() for word in ["yes", "approve", "confirm", "agree", "ok", "go"]):
-            return "confirmation_validation"
+        # If user input looks like confirmation or rejection, route to validation
+        # (i.e., resuming from interrupt, user said "Approve", "Yes", "No", etc.)
+        if state.user_input:
+            user_input_lower = state.user_input.lower()
+            confirm_words = ["yes", "approve", "confirm", "agree", "ok", "go"]
+            reject_words = ["no", "reject", "cancel", "decline", "stop"]
+
+            if any(word in user_input_lower for word in confirm_words + reject_words):
+                return "confirmation_validation"
         return "ask_for_confirmation"
 
     if state.detected_intent == Intent.BOOK_APPOINTMENT:
