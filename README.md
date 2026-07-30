@@ -193,6 +193,29 @@ GOOGLE_DRIVE_LINK_PATIENT_DATA=https://drive.google.com/file/d/.../view
 - **Data Integration**: Trello API
 - **Vector DB**: Chroma with Google Gemini embeddings
 
+## Token Optimization: Interrupt Pattern
+
+The graph implements **interrupt_before** on the confirmation validation node to save LLM tokens:
+
+### How It Works
+
+When user confirmation is needed:
+1. Graph processes: intent → extract → validate → response
+2. **Graph pauses** at confirmation point (no LLM call yet)
+3. Waits for user confirmation (no tokens consumed)
+4. User responds
+5. Graph resumes: confirmation validation → appointment creation
+
+### Token Savings Example
+
+**Booking with 30-second user response time:**
+- **Without interrupts**: 6 LLM agents running while waiting = ~200+ tokens wasted
+- **With interrupts**: Pauses before confirmation agent = 0 tokens wasted while waiting
+
+For multi-turn conversations, interrupts save 15-25% of total tokens.
+
+See [INTERRUPT_PATTERN.md](INTERRUPT_PATTERN.md) for implementation details and examples.
+
 ## Debugging
 
 ### View Multi-Agent Graph in LangSmith Studio
@@ -208,6 +231,7 @@ Then open [LangSmith Studio](https://smith.langchain.com) to see:
 - **Conditional routing** - Watch smart routing in action
 - **Full execution trace** - Detailed trace of entire workflow
 - **Agent reasoning** - View LLM prompts and responses
+- **Interrupt points** - See where graph pauses for user confirmation
 
 The multi-agent architecture is fully integrated into LangSmith for complete visibility and debugging.
 

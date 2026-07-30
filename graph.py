@@ -171,7 +171,11 @@ def reject_booking(state: ChatState) -> ChatState:
 
 
 def build_graph():
-    """Build the multi-node LangGraph workflow."""
+    """Build the multi-node LangGraph workflow with interrupt support.
+
+    Interrupts occur when user confirmation is needed to save LLM tokens.
+    The graph pauses execution and waits for user input before continuing.
+    """
     workflow = StateGraph(ChatState)
 
     # Add all nodes
@@ -236,7 +240,10 @@ def build_graph():
     workflow.add_edge("create_appointment", END)
     workflow.add_edge("reject_booking", END)
 
-    return workflow.compile()
+    # Enable interrupts BEFORE confirmation_validation node
+    # When the graph reaches ask_for_confirmation, it pauses and waits for user input
+    # This saves LLM tokens by not running confirmation_validation until user responds
+    return workflow.compile(interrupt_before=["confirmation_validation"])
 
 
 graph = build_graph()
