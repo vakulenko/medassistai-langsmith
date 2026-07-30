@@ -143,8 +143,16 @@ def should_route_to_validation(state: ChatState) -> bool:
 
 
 def should_continue(state: ChatState) -> str:
-    """Determine routing after flag setting."""
+    """Determine routing after flag setting.
+
+    When resuming from interrupt (appointment_ready_for_confirmation=True and
+    user has provided confirmation input), route directly to confirmation_validation.
+    """
     if state.appointment_ready_for_confirmation:
+        # If user input looks like confirmation, go straight to validation
+        # (i.e., resuming from interrupt, user said "Approve", "Yes", etc.)
+        if state.user_input and any(word in state.user_input.lower() for word in ["yes", "approve", "confirm", "agree", "ok", "go"]):
+            return "confirmation_validation"
         return "ask_for_confirmation"
 
     if state.detected_intent == Intent.BOOK_APPOINTMENT:
@@ -238,6 +246,7 @@ def build_graph():
         {
             "ask_for_info": "ask_for_info",
             "ask_for_confirmation": "ask_for_confirmation",
+            "confirmation_validation": "confirmation_validation",  # Direct route on resume
             END: END,
         }
     )
