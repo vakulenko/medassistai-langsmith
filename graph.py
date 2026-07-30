@@ -82,12 +82,16 @@ def response_generation_node(state: ChatState) -> ChatState:
 @traceable(name="confirmation_validation_node", run_type="chain")
 def confirmation_validation_node(state: ChatState) -> ChatState:
     """Validate user confirmation response."""
-    return confirmation_agent.execute(state)
+    print(f"[confirmation_validation_node] Processing user input: '{state.user_input}'")
+    result = confirmation_agent.execute(state)
+    print(f"[confirmation_validation_node] booking_confirmed after agent: {result['booking_confirmed']}")
+    return result
 
 
 @traceable(name="appointment_creation_node", run_type="chain")
 def appointment_creation_node(state: ChatState) -> ChatState:
     """Create appointment on Trello."""
+    print(f"[appointment_creation_node] Creating appointment - booking_confirmed={state.booking_confirmed}, patient_id={state.patient_id}")
     if state.is_deceased_patient:
         create_fraud_card(
             patient_name=state.extracted_info.get("patient_name", "Unknown"),
@@ -158,16 +162,19 @@ def should_continue(state: ChatState) -> str:
     When resuming from interrupt (appointment_ready_for_confirmation=True and
     user has provided confirmation input), route directly to confirmation_validation.
     """
-    if state.appointment_ready_for_confirmation:
-        # If user input looks like confirmation or rejection, route to validation
-        # (i.e., resuming from interrupt, user said "Approve", "Yes", "No", etc.)
-        if state.user_input:
-            user_input_lower = state.user_input.lower()
-            confirm_words = ["yes", "approve", "confirm", "agree", "ok", "go"]
-            reject_words = ["no", "reject", "cancel", "decline", "stop"]
+    # CHECK FOR RESUME FIRST - confirmation input detected while already ready for confirmation
+    if state.appointment_ready_for_confirmation and state.user_input:
+        user_input_lower = state.user_input.lower()
+        confirm_words = ["yes", "approve", "confirm", "agree", "ok", "go"]
+        reject_words = ["no", "reject", "cancel", "decline", "stop"]
 
-            if any(word in user_input_lower for word in confirm_words + reject_words):
-                return "confirmation_validation"
+        if any(word in user_input_lower for word in confirm_words + reject_words):
+            print(f"[should_continue] RESUME MODE: Routing to confirmation_validation (user said '{state.user_input}')")
+            return "confirmation_validation"
+        return "ask_for_confirmation"
+
+    if state.appointment_ready_for_confirmation:
+        print(f"[should_continue] Ready for confirmation but no clear response, staying at ask_for_confirmation")
         return "ask_for_confirmation"
 
     if state.detected_intent == Intent.BOOK_APPOINTMENT:
