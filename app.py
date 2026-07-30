@@ -167,13 +167,18 @@ if user_input:
     })
 
     # Create chat state, restore from session if available
+    # When resuming from interrupt (confirmation), restore all booking state
+    detected_intent_str = st.session_state.booking_state.get("detected_intent")
+    detected_intent = Intent(detected_intent_str) if detected_intent_str else Intent.UNKNOWN
+
     chat_state = ChatState(
         messages=active_session.chat_history,
         user_input=user_input,
         conversation_history=active_session.conversation_history,
         available_doctors=list(DOCTOR_PROFILES.keys()),
-        patient_id=st.session_state.booking_state.get("patient_id"),
+        detected_intent=detected_intent,
         extracted_info=st.session_state.booking_state.get("extracted_info", {}),
+        patient_id=st.session_state.booking_state.get("patient_id"),
         use_rag_context=st.session_state.booking_state.get("use_rag_context", False),
         requested_specialization=st.session_state.booking_state.get("requested_specialization"),
         has_available_doctor=st.session_state.booking_state.get("has_available_doctor", False),
@@ -226,8 +231,12 @@ if user_input:
                 "content": assistant_response
             })
 
-            # Save booking state for next message
+            # Save booking state for next message (for interrupt resume)
+            detected_intent_value = result.get("detected_intent")
+            detected_intent_str = detected_intent_value.value if hasattr(detected_intent_value, 'value') else str(detected_intent_value)
+
             st.session_state.booking_state = {
+                "detected_intent": detected_intent_str,
                 "patient_id": result.get("patient_id"),
                 "extracted_info": result.get("extracted_info", {}),
                 "use_rag_context": result.get("use_rag_context", False),
